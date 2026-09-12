@@ -1,0 +1,1 @@
+import { drizzle } from 'drizzle-orm/sqlite-proxy';\nconst db = drizzle((sql, params, method) => ({ rows: [] }));\ntry {\n  const result = db.select().from({ t: { id: 'text', n: 'integer' } });\n  console.log('test ok');\n} catch (e) { console.log('err', e.message); }
