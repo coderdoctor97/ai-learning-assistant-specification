@@ -42,17 +42,13 @@ function Collapsible({
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="rounded-xl border border-line bg-surface2/60">
-      <button
-        className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium"
-        onClick={() => setOpen((value) => !value)}
-        style={{ color: tone === "accent" ? "var(--accent)" : "var(--muted)" }}
-      >
-        <span>{open ? "▾" : "▸"}</span>
+    <div className="fold">
+      <button className="fold-head" onClick={() => setOpen((value) => !value)} data-tone={tone}>
+        <span className="fold-chevron">{open ? "▾" : "▸"}</span>
         <span>{title}</span>
-        {typeof count === "number" ? <span className="chip">{count}</span> : null}
+        {typeof count === "number" ? <span className="chip ml-auto">{count}</span> : null}
       </button>
-      {open ? <div className="border-t border-line px-3 py-2.5">{children}</div> : null}
+      {open ? <div className="fold-body">{children}</div> : null}
     </div>
   );
 }
@@ -87,8 +83,8 @@ function ExportBar({ sessionId }: { sessionId: string }) {
     ["txt", "Plain text"],
   ];
   return (
-    <div className="card animate-rise mt-6 p-4">
-      <div className="flex items-center gap-2">
+    <div className="card animate-rise mt-6 p-5">
+      <div className="flex flex-wrap items-center gap-2">
         <span className="chip chip-on">sequence complete</span>
         <h3 className="font-serif text-base">Export your study document</h3>
       </div>
@@ -180,15 +176,15 @@ export function StageDeck({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {/* Session header --------------------------------------------------- */}
-      <div className="border-b border-line bg-surface px-6 py-3">
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h1 className="font-serif text-xl leading-tight">{session.title}</h1>
+      <div className="studio-header px-6 py-3.5">
+        <div className="header-meta">
+          <h1 className="header-title">{session.title}</h1>
           <span className="chip">{session.configName}</span>
           {agentOn ? <span className="chip chip-on">⚡ dynamic agent</span> : null}
           {session.status === "completed" ? <span className="chip chip-on">complete</span> : null}
         </div>
 
-        <div className="mt-2.5 flex items-center gap-1.5 overflow-x-auto pb-1">
+        <div className="mt-3 flex items-center gap-1.5 overflow-x-auto pb-1">
           {steps.map((entry, index) => {
             const generated = stages.some((row) => row.index === index && row.content.trim().length > 0);
             const reachable = generated || index === generatedCount || index <= session.currentStage + 1;
@@ -198,21 +194,12 @@ export function StageDeck({
                 key={entry.id + index}
                 disabled={!reachable || busy}
                 onClick={() => onStageIndex(index)}
-                className="group flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[0.7rem] transition disabled:opacity-40"
-                style={{
-                  borderColor: active ? "var(--accent)" : "var(--border)",
-                  background: active ? "var(--accent-soft)" : generated ? "var(--surface2)" : "transparent",
-                  color: active ? "var(--accent)" : generated ? "var(--text)" : "var(--muted)",
-                }}
+                className="step-pill disabled:opacity-40"
+                data-active={active}
+                data-generated={generated}
                 title={entry.instructions}
               >
-                <span
-                  className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[0.6rem]"
-                  style={{
-                    background: generated ? "var(--accent)" : "var(--border)",
-                    color: generated ? "#fff" : "var(--muted)",
-                  }}
-                >
+                <span className="step-dot" data-generated={generated}>
                   {generated ? "✓" : index + 1}
                 </span>
                 <span className="max-w-[9rem] truncate">{entry.title}</span>
@@ -221,11 +208,11 @@ export function StageDeck({
           })}
         </div>
 
-        <div className="mt-1.5 flex items-center gap-3">
-          <div className="h-1 flex-1 overflow-hidden rounded-full bg-surface2">
-            <div className="h-full rounded-full bg-accent transition-all duration-500" style={{ width: `${progress}%` }} />
+        <div className="mt-2 flex items-center gap-3">
+          <div className="progress-track flex-1">
+            <span className="progress-bar" style={{ transform: `scaleX(${progress / 100})` }} />
           </div>
-          <span className="text-[0.7rem] text-muted">
+          <span className="font-mono text-[0.7rem] text-muted">
             {generatedCount}/{steps.length} stages
           </span>
         </div>
@@ -234,12 +221,12 @@ export function StageDeck({
       {/* Stage body ------------------------------------------------------- */}
       <div ref={bodyRef} className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
         <div className="mx-auto max-w-3xl">
-          <div className="card animate-rise overflow-hidden">
-            <div className="flex flex-wrap items-center gap-2 border-b border-line bg-surface2/50 px-5 py-2.5">
+          <div className="card stage-card animate-rise">
+            <div className="stage-toolbar">
               <span className="label">
                 Stage {stageIndex + 1} / {steps.length}
               </span>
-              <h2 className="font-serif text-base">{step?.title}</h2>
+              <h2 className="font-serif text-base tracking-tight">{step?.title}</h2>
               <div className="ml-auto flex items-center gap-1">
                 <button className="btn btn-ghost btn-xs" onClick={() => setEditing((value) => !value)} disabled={busy}>
                   ✎ Edit prompt
@@ -248,7 +235,7 @@ export function StageDeck({
             </div>
 
             {editing ? (
-              <div className="space-y-2 border-b border-line bg-surface2/30 px-5 py-3">
+              <div className="space-y-2 border-b border-line bg-surface2/40 px-5 py-3.5">
                 <input className="input" value={draftTitle} onChange={(event) => setDraftTitle(event.target.value)} />
                 <textarea
                   className="textarea"
@@ -283,7 +270,7 @@ export function StageDeck({
               </div>
             ) : null}
 
-            <div className="px-5 py-5 sm:px-7 sm:py-6">
+            <div className="stage-body sm:p-8">
               {streamingHere && !run.text ? (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-xs text-muted">
@@ -303,7 +290,7 @@ export function StageDeck({
                 <>
                   {streamingHere ? (
                     <div className="mb-3 flex items-center gap-2 text-[0.7rem] text-muted">
-                      <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
+                      <span className="status-dot" />
                       {run.status || "Composing…"}
                     </div>
                   ) : null}
@@ -311,8 +298,8 @@ export function StageDeck({
                   {streamingHere ? <span className="caret" /> : null}
                 </>
               ) : (
-                <div className="py-10 text-center">
-                  <p className="mx-auto max-w-md text-sm leading-relaxed text-muted">
+                <div className="py-12 text-center">
+                  <p className="mx-auto max-w-md text-sm leading-relaxed text-muted text-pretty">
                     {stageIndex === 0
                       ? "Ready when you are. The engine will open the session with this stage — nothing is generated in advance."
                       : "This stage has not been generated yet. Stages are produced on demand, one at a time."}
@@ -325,7 +312,7 @@ export function StageDeck({
             </div>
 
             {stage && !streamingHere ? (
-              <div className="flex flex-wrap items-center gap-1.5 border-t border-line bg-surface2/40 px-5 py-2.5">
+              <div className="stage-footer">
                 <button className="btn btn-xs" onClick={() => copy(stage.content)}>
                   ⧉ Copy
                 </button>
@@ -435,32 +422,31 @@ export function StageDeck({
 
           {/* Stage Q&A -------------------------------------------------------- */}
           {stage ? (
-            <section className="mt-6">
-              <div className="mb-2 flex items-center gap-2">
-                <h3 className="font-serif text-base">Ask about this stage</h3>
+            <section className="mt-8">
+              <div className="mb-3 flex items-center gap-2">
+                <h3 className="font-serif text-base tracking-tight">Ask about this stage</h3>
                 <span className="chip">{stageMessages.filter((message) => message.role === "user").length} asked</span>
               </div>
 
-              <div className="space-y-3">
+              <div className="thread">
                 {stageMessages.map((message, position) =>
                   message.role === "user" ? (
                     <div key={message.id} className="group flex items-center justify-end gap-1.5">
                       <button
-                        className="btn btn-ghost btn-xs opacity-0 transition group-hover:opacity-100"
+                        className="btn btn-ghost btn-xs opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100"
                         disabled={busy}
                         onClick={() => setQuestion(message.content)}
                         title="Edit this question and ask again"
                       >
                         ✎ Edit
                       </button>
-                      <div className="max-w-[85%] rounded-2xl rounded-br-sm border border-line bg-surface2 px-3.5 py-2 text-sm">
-                        {message.content}
-                      </div>
+                      <div className="msg msg-user">{message.content}</div>
                     </div>
                   ) : (
-                    <div key={message.id} className="card px-4 py-3">
+                    <div key={message.id} className="msg msg-assistant">
+                      <div className="msg-head">Studio</div>
                       <Markdown className="prose-compact">{message.content}</Markdown>
-                      <div className="mt-2 flex items-center gap-1.5">
+                      <div className="msg-actions">
                         <button className="btn btn-ghost btn-xs" onClick={() => copy(message.content)}>
                           ⧉ Copy
                         </button>
@@ -487,14 +473,15 @@ export function StageDeck({
                 )}
 
                 {qaStreaming ? (
-                  <div className="card px-4 py-3">
+                  <div className="msg msg-assistant">
                     {run.text ? (
                       <>
+                        <div className="msg-head">Studio</div>
                         <Markdown className="prose-compact">{run.text}</Markdown>
                         <span className="caret" />
                       </>
                     ) : (
-                      <div className="flex items-center gap-2 text-xs text-muted">
+                      <div className="msg-thinking">
                         <span className="dot-pulse flex gap-1">
                           <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
                           <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
@@ -508,7 +495,7 @@ export function StageDeck({
               </div>
 
               <form
-                className="mt-3 flex items-end gap-2"
+                className="mt-3"
                 onSubmit={async (event) => {
                   event.preventDefault();
                   const value = question.trim();
@@ -517,26 +504,31 @@ export function StageDeck({
                   await onAsk(stage.id, value);
                 }}
               >
-                <textarea
-                  className="textarea min-h-[3rem]"
-                  rows={2}
-                  placeholder="Ask anything about this stage — it stays attached to this stage, not a giant chat thread."
-                  value={question}
-                  disabled={busy}
-                  onChange={(event) => setQuestion(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-                      event.currentTarget.form?.requestSubmit();
-                    }
-                  }}
-                />
-                <button className="btn btn-primary" type="submit" disabled={busy || !question.trim()}>
-                  Ask
-                </button>
+                <div className="composer">
+                  <textarea
+                    className="composer-input"
+                    rows={2}
+                    placeholder="Ask anything about this stage — it stays attached to this stage, not a giant chat thread."
+                    value={question}
+                    disabled={busy}
+                    onChange={(event) => setQuestion(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+                        event.currentTarget.form?.requestSubmit();
+                      }
+                    }}
+                  />
+                  <div className="composer-actions">
+                    <span className="composer-hint">⌘ ↵ / Ctrl ↵ to send</span>
+                    <button className="btn btn-primary ml-auto" type="submit" disabled={busy || !question.trim()}>
+                      Ask
+                    </button>
+                  </div>
+                </div>
               </form>
 
               {/* Attachments */}
-              <div className="mt-3 flex flex-wrap items-center gap-2">
+              <div className="attach-row mt-3">
                 <input
                   ref={fileRef}
                   type="file"
@@ -577,7 +569,7 @@ export function StageDeck({
       </div>
 
       {/* Navigation ------------------------------------------------------- */}
-      <div className="flex items-center gap-2 border-t border-line bg-surface px-6 py-3">
+      <div className="nav-bar flex items-center gap-2 px-6 py-3.5">
         <button
           className="btn"
           disabled={stageIndex === 0 || busy}

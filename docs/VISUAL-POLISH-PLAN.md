@@ -105,3 +105,65 @@ No other inline-style or attribute beyond `className`/`style`/`data-*` is touche
 | Reveal animations leave elements invisible if CSS is blocked | Animations use `both` fill on decorative wrappers; reduced-motion block forces the settled state |
 | Restructuring the composer breaks ⌘/Ctrl+↵ submit | Composer markup keeps `<textarea>` and submit button inside the same `<form>`; `requestSubmit()` path verified by diff |
 | Step-pill inline-style → attribute conversion changes appearance | Token mapping table recorded in the changelog; values are literally the same CSS variables |
+
+---
+
+## 6. Verification results (post-execution appendix)
+
+Recorded after execution. Sections 1–5 above were frozen before any style edit; this appendix is the
+evidence package for CP-1…CP-6.
+
+### 6.1 Contrast — CP-1
+
+Script: `/tmp/audit/contrast.mjs`, parsing the token blocks out of `src/app/globals.css`.
+
+| Palette | Pairs audited | Below 4.5:1 |
+| --- | --- | --- |
+| Baseline (pre-change) | 45 | **11** — worst: editorial accent on `surface2` 3.62:1, editorial accent on bg 3.89:1, editorial good/warn on bg ≈4.0:1, light accent on accent-soft 4.23:1 |
+| After | 48 | **0** — lowest is editorial accent on `surface2` at 4.68:1 |
+
+The hero gradient headline spans `--accent` → `--accent-bright`, which is decorative large-format type
+(≥ 44px, AA large-text floor 3:1); measured endpoints are 5.12:1 and 3.39:1 in the default theme.
+
+### 6.2 Motion safety — CP-4
+
+Parsed from the compiled stylesheet (`.next/static/chunks/*.css`, 50 KB minified):
+
+- 8 keyframes — `heroRise`, `riseIn`, `messageIn`, `pulseDot`, `pulseSoft`, `caretBlink`, `shimmerSweep`,
+  `growX` — every declared property is `opacity` or `transform`. **0 failures.**
+- Every `transition` / `transition-property` declaration targets non-layout properties. **0 failures.**
+- One `@media (prefers-reduced-motion: reduce)` block that disables animation, restores settled states for
+  hidden-start elements, and exempts state-encoding transforms (progress ratios) from being reset.
+
+### 6.3 Zero functional mutation — CP-3 / CP-5
+
+Script: `/tmp/audit/integrity.mjs` (presentational attributes stripped, then compared line-by-line).
+
+- **Hooks:** identical `useState/useRef/useEffect/useMemo/useCallback` sets in every edited component.
+- **Handlers:** identical set of `on*` handler expressions (arguments and bodies included).
+- **Prop signatures:** identical in every edited `.tsx` type block.
+- **Frozen surface:** all **38** non-presentational files (`src/lib/**`, `src/db/**`, `src/app/api/**`,
+  `src/components/settings/**`, `Markdown.tsx`, `TopBar.tsx`, `NewSession.tsx`, `layout.tsx`,
+  `package.json`, `tsconfig.json`, `next.config.ts`, `eslint.config.mjs`, `postcss.config.mjs`,
+  `drizzle.config.json`) are **byte-identical** to the baseline commit by `git hash-object`.
+- `package-lock.json` was restored to its baseline content after `npm install` rewrote platform metadata.
+- Residual non-class diffs in the five edited files are exactly the recorded C1–C4 conversions plus added
+  layout wrappers, decorative elements and copy.
+
+### 6.4 Build, lint and runtime gates
+
+| Gate | Result |
+| --- | --- |
+| `npm run typecheck` | pass, no output |
+| `npm run build` | pass — 17 routes, static `/` prerendered, no warnings |
+| `npm run lint` | 4 findings — **byte-identical to the baseline worktree run** (2 × `react-hooks/set-state-in-effect`, 2 × parse errors in `test_*.mjs`); 0 new |
+| `/`, `/studio`, `/settings`, `/api/health` | HTTP 200 |
+| End-to-end API flow | session created → all 6 stages generated (1367–1514 chars each) → status `completed` → 2 Q&A turns persisted → `export?format=md` returns 10 585 chars of clean Markdown with no prompt/provider leakage |
+| Dead CSS | 0 custom classes defined but unreferenced (3 removed during the pass) |
+
+### 6.5 Environment limitation
+
+The sandbox has no browser runtime (`chromium`/`google-chrome` absent; the Playwright browser download is
+blocked), so no screenshot-based visual regression was possible. Verification is therefore structural and
+script-based, complemented by a live production build served at `http://0.0.0.0:3000`
+(`/`, `/studio`, `/settings`).
