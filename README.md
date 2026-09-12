@@ -54,4 +54,5 @@ src/lib/tools/             the app's internal retrieval tools (never exposed as 
 src/lib/export/document.ts canonical study document → md / zip / docx / html / txt / pdf
 src/app/api/               state, providers, models, configs, projects, sessions, generate, qa, attachments, export, skills
 src/components/            studio shell, stage deck, settings workspace
+.agent/skills/             agent capability index (frontend, backend, core & planning skills) — single-responsibility triggers, see index.md
 ```
