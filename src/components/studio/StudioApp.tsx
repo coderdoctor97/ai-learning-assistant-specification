@@ -344,7 +344,7 @@ export function StudioApp() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="studio-shell flex h-screen overflow-hidden">
       <Sidebar
         state={state}
         activeId={detail?.session.id ?? null}
@@ -408,19 +408,20 @@ export function StudioApp() {
       </div>
 
       {toast ? (
-        <div
-          className="card animate-rise fixed bottom-5 left-1/2 z-50 max-w-lg -translate-x-1/2 px-4 py-2.5 text-sm"
-          style={{ borderColor: toast.kind === "error" ? "var(--warn)" : "var(--accent)" }}
-          role="status"
-        >
-          <div className="flex items-start gap-3">
-            <span style={{ color: toast.kind === "error" ? "var(--warn)" : "var(--accent)" }}>
-              {toast.kind === "error" ? "⚠" : "✓"}
-            </span>
-            <span className="leading-relaxed">{toast.message}</span>
-            <button className="ml-2 text-muted hover:text-ink" onClick={() => setToast(null)} aria-label="Dismiss">
-              ×
-            </button>
+        <div className="pointer-events-none fixed inset-x-0 bottom-5 z-50 flex justify-center px-5" role="status">
+          <div
+            className="card animate-rise pointer-events-auto w-full max-w-lg px-4 py-3 text-sm"
+            style={{ borderColor: toast.kind === "error" ? "var(--warn)" : "var(--accent)" }}
+          >
+            <div className="flex items-start gap-3">
+              <span style={{ color: toast.kind === "error" ? "var(--warn)" : "var(--accent)" }}>
+                {toast.kind === "error" ? "⚠" : "✓"}
+              </span>
+              <span className="leading-relaxed">{toast.message}</span>
+              <button className="ml-2 text-muted hover:text-ink" onClick={() => setToast(null)} aria-label="Dismiss">
+                ×
+              </button>
+            </div>
           </div>
         </div>
       ) : null}

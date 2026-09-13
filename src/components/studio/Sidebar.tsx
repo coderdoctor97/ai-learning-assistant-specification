@@ -97,10 +97,7 @@ export function Sidebar({ state, activeId, collapsed, onToggleCollapse, onSelect
           </div>
           <div className="mt-1 flex items-center gap-2 text-[0.68rem] text-muted">
             <span className="inline-block h-1 w-12 overflow-hidden rounded-full bg-surface2">
-              <span
-                className="block h-full rounded-full bg-accent transition-all"
-                style={{ width: `${done ? 100 : progress}%` }}
-              />
+              <span className="progress-bar" style={{ transform: `scaleX(${(done ? 100 : progress) / 100})` }} />
             </span>
             <span>{done ? "complete" : `${session.currentStage + 1}/${session.stageCount}`}</span>
             <span className="ml-auto">{timeAgo(session.updatedAt)}</span>
