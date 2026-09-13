@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { cleanupSessions, seedSession } from "../support/seed";
+import { cleanupSessions, openSession, seedSession } from "../support/seed";
 
 /*
  * Automated accessibility gate (WCAG 2.2 AA): every primary surface must
@@ -66,10 +66,9 @@ test.describe("axe-core scans", () => {
     const request = page.request;
     seededTopic = `Axe scan session ${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     await seedSession(request, seededTopic);
-    await page.goto("/studio");
-    await page.getByRole("heading", { level: 1, name: seededTopic }).waitFor();
-    // Let entrance animations settle so elements are at their final state.
-    await page.waitForTimeout(500);
+    // Parallel suites can create a newer session: select our own seed rather
+    // than assuming the newest session is the one this worker just created.
+    await openSession(page, seededTopic);
     await scan(page);
   });
 

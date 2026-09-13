@@ -23,6 +23,7 @@ type Props = {
   onStageIndex: (index: number) => void;
   run: RunState | null;
   capabilities: Capabilities;
+  nativeDocumentsAvailable?: boolean;
   reasoningEnabled: boolean;
   agentOn: boolean;
   onGenerate: (index: number, modifier: "none" | "longer" | "shorter" | "deeper") => Promise<void>;
@@ -49,6 +50,7 @@ export function StageDeck({
   onStageIndex,
   run,
   capabilities,
+  nativeDocumentsAvailable,
   reasoningEnabled,
   onGenerate,
   onAsk,
@@ -322,6 +324,9 @@ export function StageDeck({
                 attachments={attachments}
                 busy={busy}
                 visionAvailable={capabilities.vision}
+                audioAvailable={capabilities.voice}
+                documentsAvailable={nativeDocumentsAvailable}
+                notify={notify}
                 onUpload={onUpload}
                 onDeleteAttachment={onDeleteAttachment}
               />

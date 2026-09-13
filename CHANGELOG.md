@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning 2.0.0](https://semver.org/spec/
 
 ---
 
+## [Unreleased]
+
+### Added
+- Built-in **AbhiBots Opus Gateway** with `ABHIBOTS_API_KEY`, family-aware Messages/OpenAI routing,
+  provider-scoped capabilities and explicitly unverified discovery fallback.
+- Binary PDF input on document-capable Messages routes and pre-recorded audio attachment support;
+  audio forces the OpenAI route with PDF text fallback. Existing demo output stays unchanged.
+- Opt-in native web tools: three bounded rounds, signature-preserving assistant replay, matching
+  tool-result IDs, streaming tool parsing and separate resource persistence.
+- Additive SQLite migration for `settings.toolUse` (default off), localized controls, and
+  mocked protocol, ingestion, migration and browser accessibility contracts.
+
+### Fixed
+- Public-page retrieval validates private/metadata IPs, DNS answers and redirects and pins resolved
+  socket addresses. Claude/Gemini image payloads enforce the provider's family limits.
+- Bundled Chromium fontconfig now points at its extracted fonts. Accessibility/keyboard tests
+  select their own seeded sessions and reset sequential focus traversal deterministically.
+- The new-session methodology link meets the existing 24px target-size requirement.
+
 ## [0.2.0] — 2026-09-12
 
 **Release type:** MINOR — backward-compatible visual capability. New design-token layer, motion system,

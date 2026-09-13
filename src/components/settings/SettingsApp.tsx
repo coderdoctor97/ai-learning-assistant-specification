@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ProviderCard } from "@/components/settings/ProviderCard";
+import { usesDocumentBlocks } from "@/lib/media";
 import { t } from "@/lib/i18n";
 import { applyTheme } from "@/lib/theme";
 import { api, type AppState, type ConfigRow, type LearningStep } from "@/lib/client/api";
@@ -654,6 +655,7 @@ export function SettingsApp() {
                 [
                   ["streaming", t("settings.generation.streaming"), t("settings.generation.streamingHint")],
                   ["dynamicAgent", t("settings.generation.agent"), t("settings.generation.agentHint")],
+                  ["toolUse", t("settings.generation.toolUse"), t("settings.generation.toolUseHint")],
                   ["webRetrieval", t("settings.generation.retrieval"), t("settings.generation.retrievalHint")],
                   ["reasoningEnabled", t("settings.generation.reasoning"), t("settings.generation.reasoningHint")],
                 ] as const
@@ -662,6 +664,9 @@ export function SettingsApp() {
                   <input
                     type="checkbox"
                     className="mt-0.5"
+                    disabled={key === "toolUse" && (!settings.webRetrieval ||
+                      !state.models.find((model) => model.providerId === settings.activeProviderId && model.modelId === settings.activeModelId)?.capabilities.tools ||
+                      !usesDocumentBlocks(state.providers.find((provider) => provider.id === settings.activeProviderId)?.kind, settings.activeModelId ?? undefined, false))}
                     checked={Boolean(settings[key])}
                     onChange={(event) => guard(() => api.patchSettings({ [key]: event.target.checked }))}
                   />

@@ -45,6 +45,13 @@ export function bundledChromiumLaunchOptions(): LaunchOptions {
     extract(path.join(binDir, "al2023.tar.br"), path.join(cache, "al2023"));
     extract(path.join(binDir, "fonts.tar.br"), path.join(cache, "fonts"));
     extract(path.join(binDir, "swiftshader.tar.br"), path.join(cache, "swiftshader"));
+    // The bundled fonts.conf points at Lambda's /tmp/fonts, not our extraction
+    // directory. Without a usable font, Chromium 153 crashes in SkFontMgr when
+    // rendering even the first heading in a fresh sandbox.
+    writeFileSync(path.join(cache, "fonts", "fonts.conf"), `<?xml version="1.0"?>
+<fontconfig><dir>${path.join(cache, "fonts", "fonts")}</dir>
+<cachedir>${path.join(cache, "font-cache")}</cachedir></fontconfig>`);
+
 
     const bundled = require("@sparticuz/chromium").default;
     /* The package targets AWS Lambda: its GPU/swiftshader and

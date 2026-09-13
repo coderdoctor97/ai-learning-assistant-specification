@@ -36,7 +36,13 @@ test("studio: skip link appears on focus", async ({ page }) => {
   await clearDevPortal(page);
   // /studio autofocuses the new-session topic input; reset focus to the
   // document so the first Tab starts from the top of the tab order.
-  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await page.evaluate(() => {
+    // blur() alone retains Chromium's sequential navigation starting point at
+    // the autofocus input. Focus the document root to actually reset traversal.
+    document.body.tabIndex = -1;
+    document.body.focus();
+    document.body.removeAttribute("tabindex");
+  });
   const skipLink = page.locator(".skip-link");
   await page.keyboard.press("Tab");
   await expect(skipLink).toBeFocused();

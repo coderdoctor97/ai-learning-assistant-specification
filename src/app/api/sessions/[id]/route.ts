@@ -36,6 +36,7 @@ export async function GET(_request: Request, { params }: Params) {
         size: attachment.size,
         kind: attachment.kind,
         hasText: attachment.extractedText.length > 0,
+        hasBinary: Boolean(attachment.dataUrl),
         createdAt: attachment.createdAt,
       })),
     });

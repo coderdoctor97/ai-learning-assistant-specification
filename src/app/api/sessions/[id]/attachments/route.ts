@@ -1,9 +1,9 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { attachments as attachmentsTable, models as modelsTable, settings as settingsTable } from "@/db/schema";
+import { attachments as attachmentsTable, models as modelsTable, settings as settingsTable, providers as providersTable } from "@/db/schema";
 import { fail, handleError, ok } from "@/lib/api";
 import { ingestFile, MAX_FILE_BYTES } from "@/lib/files";
-import { capabilitiesForModelId } from "@/lib/providers/catalog";
+import { NO_CAPABILITIES } from "@/lib/providers/catalog";
 import { mergeCapabilities } from "@/lib/providers/gateway";
 
 export const runtime = "nodejs";
@@ -11,13 +11,13 @@ export const dynamic = "force-dynamic";
 
 type Params = { params: Promise<{ id: string }> };
 
-async function visionAvailable(): Promise<boolean> {
+async function activeCapabilities() {
   const [current] = await db.select().from(settingsTable).where(eq(settingsTable.id, "global")).limit(1);
-  if (!current?.activeProviderId || !current.activeModelId) return false;
+  if (!current?.activeProviderId || !current.activeModelId) return NO_CAPABILITIES;
   const rows = await db.select().from(modelsTable).where(eq(modelsTable.providerId, current.activeProviderId));
   const model = rows.find((row) => row.modelId === current.activeModelId);
-  if (model) return mergeCapabilities(model.capabilities, model.modelId).vision;
-  return capabilitiesForModelId(current.activeModelId).caps.vision;
+  const [provider] = await db.select().from(providersTable).where(eq(providersTable.id, current.activeProviderId));
+  return mergeCapabilities(model?.capabilities, current.activeModelId, provider?.kind);
 }
 
 export async function POST(request: Request, { params }: Params) {
@@ -29,8 +29,11 @@ export async function POST(request: Request, { params }: Params) {
     if (!(file instanceof File)) return fail("No file received.");
     if (file.size > MAX_FILE_BYTES) return fail("Files must be 15 MB or smaller.", 413);
 
+    const capabilities = await activeCapabilities();
     const result = await ingestFile(file.name, file.type, await file.arrayBuffer(), {
-      visionAvailable: await visionAvailable(),
+      visionAvailable: capabilities.vision,
+      documentsAvailable: capabilities.documents,
+      audioAvailable: capabilities.voice,
     });
     if (!result.ok) return fail(result.error, result.status);
 
@@ -55,6 +58,7 @@ export async function POST(request: Request, { params }: Params) {
           mime: created.mime,
           size: created.size,
           kind: created.kind,
+          hasBinary: Boolean(created.dataUrl),
           hasText: created.extractedText.length > 0,
           createdAt: created.createdAt,
         },

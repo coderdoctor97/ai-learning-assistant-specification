@@ -32,6 +32,7 @@ type _StageDeckKeys = Assert<
     | "stageIndex"
     | "onStageIndex"
     | "run"
+    | "nativeDocumentsAvailable"
     | "capabilities"
     | "reasoningEnabled"
     | "agentOn"

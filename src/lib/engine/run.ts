@@ -1,3 +1,5 @@
+import { t } from "@/lib/i18n";
+import { nativeToolChat, nativeToolsEnabled } from "./native-tools";
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import {
@@ -95,8 +97,8 @@ export async function loadRuntime(sessionId: string): Promise<Runtime> {
     .where(and(eq(modelsTable.providerId, provider.id), eq(modelsTable.modelId, settings.activeModelId)))
     .limit(1);
 
-  const fallback = capabilitiesForModelId(settings.activeModelId);
-  const capabilities = mergeCapabilities(model?.capabilities ?? null, settings.activeModelId);
+  const fallback = capabilitiesForModelId(settings.activeModelId, {}, provider.kind);
+  const capabilities = mergeCapabilities(model?.capabilities ?? null, settings.activeModelId, provider.kind);
 
   const [stages, attachments, skills] = await Promise.all([
     db.select().from(stagesTable).where(eq(stagesTable.sessionId, sessionId)).orderBy(asc(stagesTable.index)),
@@ -284,7 +286,7 @@ async function* generate(args: GenerateArgs): AsyncGenerator<
     modifier === "longer" ? Math.floor(settings.maxOutputTokens * 1.6) : settings.maxOutputTokens,
     runtime.maxOutput,
   );
-  const { budget } = contextCharBudget(settings.contextLevel, runtime.contextLength, maxTokens);
+  let { budget } = contextCharBudget(settings.contextLevel, runtime.contextLength, maxTokens);
   const reasoningOn = settings.reasoningEnabled && capabilities.reasoning;
   const useStreaming = settings.streaming && capabilities.streaming;
 
@@ -293,7 +295,40 @@ async function* generate(args: GenerateArgs): AsyncGenerator<
   let agentNotes: string[] = [];
   let planNote: string | undefined;
 
-  if (runtime.session.dynamicAgent) {
+  const makeMessages = () => buildMessages(
+    {
+      settings,
+      session: runtime.session,
+      steps: runtime.steps,
+      stageIndex,
+      priorStages: runtime.stages.filter((stage) => stage.index < stageIndex && stage.content.trim().length > 0),
+      qa,
+      attachments: runtime.attachments,
+      skills: runtime.skills,
+      retrievedContext,
+      modifier,
+      agentPlanNote: planNote,
+      question,
+      stageContent,
+      supportsVision: capabilities.vision,
+      supportsDocuments: capabilities.documents,
+      supportsAudio: capabilities.voice,
+      providerKind: runtime.provider.kind,
+      modelId: runtime.modelId,
+      contextCharBudget: budget,
+    },
+    mode,
+  );
+  const useNative = nativeToolsEnabled(settings, capabilities.tools, runtime.provider, {
+    model: runtime.modelId, messages: makeMessages(),
+  });
+  if (useNative) {
+    // Reserve the continuation headroom before filling the context window.
+    const toolOutput = Math.min(runtime.maxOutput, Math.max(maxTokens, 4096));
+    budget = contextCharBudget(settings.contextLevel, runtime.contextLength, toolOutput).budget;
+  }
+
+  if (runtime.session.dynamicAgent && !useNative) {
     yield { type: "status", message: "Agent is planning this step…" };
     const recentQa = qa
       .slice(-6)
@@ -344,26 +379,7 @@ async function* generate(args: GenerateArgs): AsyncGenerator<
     if (directives.length) planNote = directives.join("\n");
   }
 
-  const messages = buildMessages(
-    {
-      settings,
-      session: runtime.session,
-      steps: runtime.steps,
-      stageIndex,
-      priorStages: runtime.stages.filter((stage) => stage.index < stageIndex && stage.content.trim().length > 0),
-      qa,
-      attachments: runtime.attachments,
-      skills: runtime.skills,
-      retrievedContext,
-      modifier,
-      agentPlanNote: planNote,
-      question,
-      stageContent,
-      supportsVision: capabilities.vision,
-      contextCharBudget: budget,
-    },
-    mode,
-  );
+  const messages = makeMessages();
 
   yield { type: "status", message: mode === "stage" ? "Composing the stage…" : "Answering…" };
 
@@ -371,7 +387,29 @@ async function* generate(args: GenerateArgs): AsyncGenerator<
   let body = "";
   let reasoning = "";
 
-  if (useStreaming) {
+  if (useNative) {
+    yield { type: "status", message: t("engine.tools.running") };
+    for await (const event of nativeToolChat(runtime.provider, {
+      model: runtime.modelId, messages, maxTokens, temperature: settings.temperature,
+      stream: useStreaming, reasoning: reasoningOn,
+    }, runtime.maxOutput, budget)) {
+      if (event.type === "resources") {
+        resources = dedupeResources([...resources, ...event.resources]);
+        yield { type: "resources", resources };
+      } else if (event.type === "reasoning") {
+        reasoning += event.text;
+        yield event;
+      } else if (event.type === "content") {
+        const visible = splitter.push(event.text);
+        body += visible;
+        if (visible) yield { type: "delta", text: visible };
+      }
+    }
+    const tail = splitter.flush();
+    body += tail;
+    if (tail) yield { type: "delta", text: tail };
+    if (resources.length) agentNotes.push(t("engine.tools.used"));
+  } else if (useStreaming) {
     for await (const event of streamChat(runtime.provider, {
       model: runtime.modelId,
       messages,
@@ -385,6 +423,7 @@ async function* generate(args: GenerateArgs): AsyncGenerator<
         yield { type: "reasoning", text: event.text };
         continue;
       }
+      if (event.type !== "content") continue;
       const visible = splitter.push(event.text);
       if (visible) {
         body += visible;

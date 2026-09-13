@@ -56,6 +56,7 @@ export type SettingsRow = {
   reasoningEnabled: boolean;
   streaming: boolean;
   webRetrieval: boolean;
+  toolUse: boolean;
   learnerProfile: LearnerProfile;
 };
 
@@ -156,6 +157,7 @@ export type AttachmentRow = {
   size: number;
   kind: string;
   hasText: boolean;
+  hasBinary?: boolean;
   createdAt: string;
 };
 

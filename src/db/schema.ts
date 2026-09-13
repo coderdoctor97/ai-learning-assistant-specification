@@ -119,6 +119,7 @@ export const settings = sqliteTable("settings", {
   dynamicAgent: integer("dynamic_agent", { mode: "boolean" }).notNull().default(false),
   reasoningEnabled: integer("reasoning_enabled", { mode: "boolean" }).notNull().default(false),
   streaming: integer("streaming", { mode: "boolean" }).notNull().default(true),
+  toolUse: integer("tool_use", { mode: "boolean" }).notNull().default(false),
   webRetrieval: integer("web_retrieval", { mode: "boolean" }).notNull().default(true),
   learnerProfile: text("learner_profile", { mode: "json" })
     .$type<LearnerProfile>()

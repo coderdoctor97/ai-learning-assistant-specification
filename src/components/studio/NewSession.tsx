@@ -143,7 +143,7 @@ export function NewSession({ state, busy, onCreate }: Props) {
               <span className="label">{t("newsession.methodology.label")}</span>
               <Link
                 href="/settings#methodologies"
-                className="text-micro text-accent underline underline-offset-2"
+                className="inline-flex min-h-6 items-center text-micro text-accent underline underline-offset-2"
               >
                 {t("newsession.methodology.edit")}
               </Link>

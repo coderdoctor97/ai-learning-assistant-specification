@@ -1,3 +1,5 @@
+import { abhibotsCapabilities } from "./abhibots";
+import { t } from "@/lib/i18n";
 import type { ModelCapabilities } from "@/db/schema";
 
 export type ProviderKind =
@@ -10,6 +12,7 @@ export type ProviderKind =
   | "go"
   | "zen"
   | "demo"
+  | "abhibots"
   | "custom";
 
 export type CatalogEntry = {
@@ -105,6 +108,15 @@ export const PROVIDER_CATALOG: CatalogEntry[] = [
     blurb: "OpenAI-compatible Zen endpoint.",
   },
   {
+    kind: "abhibots",
+    name: "AbhiBots Opus Gateway",
+    baseUrl: "https://opus.abhibots.com/v1",
+    apiKeyEnv: "ABHIBOTS_API_KEY",
+    protocol: "openai",
+    supportsDiscovery: true,
+    blurb: t("settings.provider.abhibots.hint"),
+  },
+  {
     kind: "custom",
     name: "Custom provider",
     baseUrl: "",
@@ -170,12 +182,14 @@ const KNOWN_MODELS: KnownModel[] = [
 export function capabilitiesForModelId(
   modelId: string,
   fallback: Partial<ModelCapabilities> = {},
+  kind?: string,
 ): { caps: ModelCapabilities; context: number; output: number } {
   const normalized = modelId.toLowerCase().split("/").pop() ?? modelId.toLowerCase();
   const known = KNOWN_MODELS.find((entry) => entry.match.test(normalized));
   const caps: ModelCapabilities = {
     ...NO_CAPABILITIES,
     ...(known?.caps ?? {}),
+    ...(kind === "abhibots" ? abhibotsCapabilities(normalized) : {}),
     ...fallback,
   };
   return {

@@ -9,6 +9,19 @@
 
 export const en = {
   /* -- Global chrome ------------------------------------------------- */
+  "settings.provider.abhibots.hint": "Multi-family gateway: Claude, Gemini, Grok and GPT-4.1 behind one key. Vision, PDFs, audio, tools and streaming depend on the family.",
+  "settings.provider.abhibots.fallback": "Live discovery unavailable. Showing a static model list; availability and credentials have not been verified.",
+  "stage.attach.audio": "Attach audio clip",
+  "stage.attach.audioHint": "Pre-recorded MP3, WAV, M4A, OGG, WebM or FLAC; up to 15 MB. No microphone recording.",
+  "stage.attach.audioUnavailable": "The active model does not support audio input. Switch to an audio-capable model first.",
+  "stage.attach.audioInvalid": "That file does not match a supported audio format.",
+  "stage.attach.imageUnavailable": "The active model does not support image input. Switch to a vision-capable model first.",
+  "stage.attach.document": "Sent as document",
+  "stage.attach.imageLimits": "Claude: 5 MB per image; Gemini: 20 MB (uploads: 15 MB). Oversized images are omitted with a note. Unsupported images such as HEIC may be replaced with a note by the provider.",
+  "settings.generation.toolUse": "Native web tools",
+  "settings.generation.toolUseHint": "Opt in to model-directed search and page reading (up to three rounds). Requires web retrieval, a tools-capable model and the Messages route; otherwise the existing planner is used.",
+  "engine.tools.used": "Native web tools consulted external sources",
+  "engine.tools.running": "Consulting web tools…",
   "app.name": "Learning Studio",
   "app.brandFirst": "Learning",
   "app.brandSecond": "Studio",

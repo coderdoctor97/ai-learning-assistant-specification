@@ -9,6 +9,7 @@ import {
   type ResourceRef,
   type SessionDetail,
 } from "@/lib/client/api";
+import { usesDocumentBlocks } from "@/lib/media";
 import { t } from "@/lib/i18n";
 import { applyTheme } from "@/lib/theme";
 import { useMediaQuery } from "@/lib/useMediaQuery";
@@ -476,6 +477,8 @@ export function StudioApp() {
             onGenerate={generate}
             onAsk={ask}
             onEditStep={editStep}
+            nativeDocumentsAvailable={capabilities.documents && usesDocumentBlocks(activeProvider?.kind, activeModel?.modelId,
+              capabilities.voice && detail.attachments.some((attachment) => attachment.kind === "audio"))}
             onUpload={upload}
             onDeleteAttachment={removeAttachment}
             notify={notify}

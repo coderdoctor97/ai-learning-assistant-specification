@@ -1,3 +1,6 @@
+import { t } from "@/lib/i18n";
+import { AUDIO_FORMATS } from "@/lib/media";
+
 export const MAX_FILE_BYTES = 15 * 1024 * 1024;
 
 export const REJECTED_EXTENSIONS = [".zip", ".json", ".exe", ".sh", ".js", ".ts", ".bat", ".dll", ".7z", ".rar", ".tar", ".gz"];
@@ -14,7 +17,7 @@ const DOC_MIMES = [
 
 export type IngestResult = {
   ok: true;
-  kind: "image" | "document";
+  kind: "image" | "document" | "audio";
   mime: string;
   extractedText: string;
   dataUrl: string | null;
@@ -35,7 +38,14 @@ function sniff(bytes: Uint8Array): string | null {
   if (startsWith([0x89, 0x50, 0x4e, 0x47])) return "image/png";
   if (startsWith([0xff, 0xd8, 0xff])) return "image/jpeg";
   if (startsWith([0x47, 0x49, 0x46, 0x38])) return "image/gif";
-  if (startsWith([0x52, 0x49, 0x46, 0x46])) return "image/webp";
+  const ascii = (start: number, end: number) => String.fromCharCode(...bytes.slice(start, end));
+  if (ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP") return "image/webp";
+  if (ascii(0, 4) === "RIFF" && ascii(8, 12) === "WAVE") return "audio/wav";
+  if (ascii(0, 3) === "ID3" || (bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0)) return "audio/mpeg";
+  if (ascii(0, 4) === "OggS") return "audio/ogg";
+  if (ascii(0, 4) === "fLaC") return "audio/flac";
+  if (ascii(4, 8) === "ftyp") return "audio/mp4";
+  if (startsWith([0x1a, 0x45, 0xdf, 0xa3])) return "audio/webm";
   if (startsWith([0x50, 0x4b, 0x03, 0x04])) return "application/zip"; // docx is a zip too
   if (startsWith([0xd0, 0xcf, 0x11, 0xe0])) return "application/msword";
   return null;
@@ -45,7 +55,7 @@ export async function ingestFile(
   name: string,
   declaredMime: string,
   buffer: ArrayBuffer,
-  options: { visionAvailable: boolean },
+  options: { visionAvailable: boolean; documentsAvailable?: boolean; audioAvailable?: boolean },
 ): Promise<IngestResult | IngestFailure> {
   const bytes = new Uint8Array(buffer);
   const extension = extensionOf(name);
@@ -72,12 +82,25 @@ export async function ingestFile(
 
   const mime = sniffed && sniffed !== "application/zip" ? sniffed : declaredMime || "application/octet-stream";
 
+  // Audio is magic-checked before trusting MIME/extension (WAV is RIFF, not WebP).
+  const audioFormat = AUDIO_FORMATS.find((format) => format.mime === sniffed);
+  const audioRequested = AUDIO_FORMATS.some((format) => `.${format.format}` === extension) || declaredMime.startsWith("audio/");
+  if (audioFormat || audioRequested) {
+    if (!options.audioAvailable) return { ok: false, error: t("stage.attach.audioUnavailable"), status: 415 };
+    // M4A has varied container brands; only permit its extension fallback when
+    // no other magic signature exists. ZIP/JSON rejection above still wins.
+    const format = audioFormat ?? (!sniffed && extension === ".m4a" ? AUDIO_FORMATS.find((f) => f.format === "m4a") : undefined);
+    if (!format) return { ok: false, error: t("stage.attach.audioInvalid"), status: 415 };
+    return { ok: true, kind: "audio", mime: format.mime, extractedText: "",
+      dataUrl: `data:${format.mime};base64,${Buffer.from(bytes).toString("base64")}` };
+  }
+
   // Images -------------------------------------------------------------
   if (IMAGE_MIMES.includes(mime)) {
     if (!options.visionAvailable) {
       return {
         ok: false,
-        error: "The active model does not support image input. Switch to a vision-capable model first.",
+        error: t("stage.attach.imageUnavailable"),
         status: 415,
       };
     }
@@ -93,6 +116,7 @@ export async function ingestFile(
 
   // PDF ----------------------------------------------------------------
   if (mime === "application/pdf") {
+    const dataUrl = options.documentsAvailable ? `data:application/pdf;base64,${Buffer.from(bytes).toString("base64")}` : null;
     try {
       const { extractText, getDocumentProxy } = await import("unpdf");
       const pdf = await getDocumentProxy(bytes);
@@ -105,11 +129,11 @@ export async function ingestFile(
           kind: "document",
           mime,
           extractedText: "",
-          dataUrl: null,
-          note: "No selectable text found — this looks like a scanned PDF. Upload it as an image to a vision-capable model instead.",
+          dataUrl,
+          note: dataUrl ? undefined : "No selectable text found — this looks like a scanned PDF. Upload it as an image to a vision-capable model instead.",
         };
       }
-      return { ok: true, kind: "document", mime, extractedText: cleaned.slice(0, 200000), dataUrl: null };
+      return { ok: true, kind: "document", mime, extractedText: cleaned.slice(0, 200000), dataUrl };
     } catch (error) {
       return {
         ok: false,

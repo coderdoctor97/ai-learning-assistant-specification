@@ -1,3 +1,4 @@
+import { t } from "@/lib/i18n";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { models as modelsTable, providers as providersTable } from "@/db/schema";
@@ -64,8 +65,8 @@ export async function POST(request: Request) {
       const [updated] = await db
         .update(providersTable)
         .set({
-          status: "connected",
-          statusMessage: `${discovered.length} models available`,
+          status: discovered.usedFallback ? "unknown" : "connected",
+          statusMessage: discovered.usedFallback ? t("settings.provider.abhibots.fallback") : `${discovered.length} models available`,
           enabled: true,
           lastCheckedAt: new Date(),
           updatedAt: new Date(),

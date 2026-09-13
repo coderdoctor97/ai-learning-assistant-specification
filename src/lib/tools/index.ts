@@ -1,3 +1,5 @@
+import { safeUrl, fetchPublicUrl } from "./public-url";
+export { safeUrl } from "./public-url";
 import type { ResourceRef } from "@/db/schema";
 
 /**
@@ -9,19 +11,6 @@ export type ToolResult = {
   resources: ResourceRef[];
   text: string;
 };
-
-const BLOCKED_HOSTS = /^(localhost|127\.|0\.0\.0\.0|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|\[?::1\]?)/i;
-
-function safeUrl(raw: string): URL | null {
-  try {
-    const url = new URL(raw);
-    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
-    if (BLOCKED_HOSTS.test(url.hostname)) return null;
-    return url;
-  } catch {
-    return null;
-  }
-}
 
 function decodeEntities(value: string): string {
   return value
@@ -234,10 +223,7 @@ export async function fetchUrl(rawUrl: string, maxChars = 6000): Promise<ToolRes
   const url = safeUrl(rawUrl);
   if (!url) return { resources: [], text: "" };
   try {
-    const response = await fetch(url, {
-      headers: { "user-agent": "Mozilla/5.0 (compatible; LearningStudio/1.0)", accept: "text/html,text/plain,*/*" },
-      signal: AbortSignal.timeout(20000),
-    });
+    const response = await fetchPublicUrl(url.toString(), AbortSignal.timeout(20000));
     if (!response.ok) return { resources: [], text: "" };
     const contentType = response.headers.get("content-type") ?? "";
     if (!/text\/|json|xml/i.test(contentType)) return { resources: [], text: "" };

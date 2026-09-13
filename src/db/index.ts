@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS settings (
   dynamic_agent INTEGER NOT NULL DEFAULT 0,
   reasoning_enabled INTEGER NOT NULL DEFAULT 0,
   streaming INTEGER NOT NULL DEFAULT 1,
+  tool_use INTEGER NOT NULL DEFAULT 0,
   web_retrieval INTEGER NOT NULL DEFAULT 1,
   learner_profile TEXT NOT NULL,
   updated_at INTEGER NOT NULL
@@ -170,6 +171,19 @@ function getSqlite(): DatabaseSync {
     sqlite.exec("PRAGMA journal_mode = WAL;");
     sqlite.exec("PRAGMA foreign_keys = ON;");
     sqlite.exec(SCHEMA_SQL);
+    // Additive migration for existing local databases; keep all stored settings.
+    // The write lock makes the introspection + ALTER safe across dev workers.
+    sqlite.exec("BEGIN IMMEDIATE");
+    try {
+      const columns = sqlite.prepare("PRAGMA table_info(settings)").all();
+      if (!columns.some((column) => column.name === "tool_use")) {
+        sqlite.exec("ALTER TABLE settings ADD COLUMN tool_use INTEGER NOT NULL DEFAULT 0");
+      }
+      sqlite.exec("COMMIT");
+    } catch (error) {
+      sqlite.exec("ROLLBACK");
+      throw error;
+    }
     globalForDb.__studioSqlite = sqlite;
   }
   return globalForDb.__studioSqlite;

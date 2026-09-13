@@ -140,6 +140,7 @@ export function ProviderCard({
       </div>
 
       <p className="mt-1.5 text-xs leading-relaxed text-muted">{provider.blurb}</p>
+      {provider.kind === "abhibots" ? <p className="mt-1 text-xs text-muted">{t("stage.attach.imageLimits")}</p> : null}
       {provider.statusMessage ? (
         <p className={`mt-1 text-xs ${provider.status === "error" ? "text-warn" : "text-muted"}`}>
           {provider.statusMessage}

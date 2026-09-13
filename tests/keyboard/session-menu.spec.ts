@@ -20,7 +20,7 @@ test("menu opens via keyboard, arrows move items, Escape restores focus", async 
   // to pointer users on hover, and to keyboard users on focus).
   await row.focus();
   await page.keyboard.press("Tab");
-  const menuTrigger = page.locator('button[aria-haspopup="menu"]').first();
+  const menuTrigger = row.locator("..").locator('button[aria-haspopup="menu"]');
   await expect(menuTrigger).toBeFocused();
   await expect(menuTrigger).toBeVisible();
 
@@ -49,7 +49,7 @@ test("outside click dismisses the menu", async ({ page }) => {
   const row = page.getByRole("button", { name: topic, exact: false }).first();
   await row.waitFor({ state: "visible" });
   await row.hover();
-  const menuTrigger = page.locator('button[aria-haspopup="menu"]').first();
+  const menuTrigger = row.locator("..").locator('button[aria-haspopup="menu"]');
   await menuTrigger.click();
   const menu = page.getByRole("menu");
   await expect(menu).toBeVisible();

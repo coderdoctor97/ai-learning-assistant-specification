@@ -69,6 +69,7 @@ type SettingsPatch = {
   reasoningEnabled?: boolean;
   streaming?: boolean;
   webRetrieval?: boolean;
+  toolUse?: boolean;
   learnerProfile?: { level?: string; background?: string; goals?: string; preferences?: string };
 };
 
@@ -90,6 +91,7 @@ export async function PATCH(request: Request) {
     if (typeof body.dynamicAgent === "boolean") patch.dynamicAgent = body.dynamicAgent;
     if (typeof body.reasoningEnabled === "boolean") patch.reasoningEnabled = body.reasoningEnabled;
     if (typeof body.streaming === "boolean") patch.streaming = body.streaming;
+    if (typeof body.toolUse === "boolean") patch.toolUse = body.toolUse;
     if (typeof body.webRetrieval === "boolean") patch.webRetrieval = body.webRetrieval;
     if (typeof body.temperature === "number") {
       patch.temperature = Math.min(2, Math.max(0, body.temperature));
