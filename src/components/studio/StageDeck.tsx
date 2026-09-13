@@ -2,16 +2,20 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Markdown } from "@/components/Markdown";
-import type { Capabilities, ResourceRef, SessionDetail, StageRow } from "@/lib/client/api";
+import { Collapsible } from "@/components/ui/Collapsible";
+import { t } from "@/lib/i18n";
+import type { Capabilities, SessionDetail } from "@/lib/client/api";
+import { AttachmentRow } from "./stage/AttachmentRow";
+import { ComposerForm } from "./stage/Composer";
+import { ExportBar } from "./stage/ExportBar";
+import { QaThread } from "./stage/QaThread";
+import { ResourceList } from "./stage/ResourceList";
+import { StageMeta } from "./stage/StageMeta";
+import { StageToolbar } from "./stage/StageToolbar";
+import type { RunState } from "./stage/types";
 
-export type RunState = {
-  mode: "stage" | "qa";
-  stageIndex: number;
-  status: string;
-  text: string;
-  reasoning: string;
-  resources: ResourceRef[];
-};
+export type { RunState } from "./stage/types";
+export type { StageRow } from "@/lib/client/api";
 
 type Props = {
   detail: SessionDetail;
@@ -29,86 +33,16 @@ type Props = {
   notify: (kind: "error" | "info", message: string) => void;
 };
 
-function Collapsible({
-  title,
-  count,
-  children,
-  tone = "muted",
-}: {
-  title: string;
-  count?: number;
-  children: React.ReactNode;
-  tone?: "muted" | "accent";
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="fold">
-      <button className="fold-head" onClick={() => setOpen((value) => !value)} data-tone={tone}>
-        <span className="fold-chevron">{open ? "▾" : "▸"}</span>
-        <span>{title}</span>
-        {typeof count === "number" ? <span className="chip ml-auto">{count}</span> : null}
-      </button>
-      {open ? <div className="fold-body">{children}</div> : null}
-    </div>
-  );
-}
-
-function ResourceList({ resources }: { resources: ResourceRef[] }) {
-  if (!resources.length) return <p className="text-xs text-muted">No external sources were used for this stage.</p>;
-  return (
-    <ul className="space-y-2">
-      {resources.map((resource) => (
-        <li key={resource.id} className="text-xs leading-relaxed">
-          <a href={resource.url} target="_blank" rel="noreferrer noopener" className="font-medium text-accent underline underline-offset-2">
-            {resource.title}
-          </a>
-          <div className="text-muted">
-            {resource.source} · {resource.type}
-            {resource.retrievedAt ? ` · retrieved ${new Date(resource.retrievedAt).toLocaleString()}` : ""}
-          </div>
-          {resource.snippet ? <p className="mt-1 line-clamp-3 text-muted">{resource.snippet}</p> : null}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function ExportBar({ sessionId }: { sessionId: string }) {
-  const formats: [string, string][] = [
-    ["md", "Markdown"],
-    ["zip", "Markdown + images"],
-    ["docx", "Word (.docx)"],
-    ["pdf", "PDF (print)"],
-    ["html", "HTML"],
-    ["txt", "Plain text"],
-  ];
-  return (
-    <div className="card animate-rise mt-6 p-5">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="chip chip-on">sequence complete</span>
-        <h3 className="font-serif text-base">Export your study document</h3>
-      </div>
-      <p className="mt-1.5 text-xs leading-relaxed text-muted">
-        Every stage, plus the questions you asked along the way, compiled into one clean document. Internal prompts,
-        provider details and runtime metadata are never included.
-      </p>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {formats.map(([format, label]) => (
-          <a
-            key={format}
-            className="btn btn-xs"
-            href={`/api/sessions/${sessionId}/export?format=${format}`}
-            target={format === "pdf" ? "_blank" : undefined}
-            rel="noreferrer"
-          >
-            {label}
-          </a>
-        ))}
-      </div>
-    </div>
-  );
-}
-
+/*
+ * Stage deck orchestrator. Focused compound components live in ./stage/:
+ *   StageToolbar — session metadata, progression rail, progress
+ *   StageMeta    — stage toolbar + inline prompt editor
+ *   QaThread     — conversation display with exit transitions
+ *   Composer     — text entry, submission, shortcuts
+ *   AttachmentRow— file chips
+ *   ExportBar    — post-completion export panel
+ * All props and callbacks are passed through verbatim.
+ */
 export function StageDeck({
   detail,
   stageIndex,
@@ -116,7 +50,6 @@ export function StageDeck({
   run,
   capabilities,
   reasoningEnabled,
-  agentOn,
   onGenerate,
   onAsk,
   onEditStep,
@@ -129,21 +62,10 @@ export function StageDeck({
   const step = steps[stageIndex];
   const stage = stages.find((entry) => entry.index === stageIndex) ?? null;
   const streamingHere = run?.mode === "stage" && run.stageIndex === stageIndex;
-  const qaStreaming = run?.mode === "qa" && run.stageIndex === stageIndex;
   const busy = run !== null;
 
   const [question, setQuestion] = useState("");
-  const [editing, setEditing] = useState(false);
-  const [draftTitle, setDraftTitle] = useState(step?.title ?? "");
-  const [draftInstructions, setDraftInstructions] = useState(step?.instructions ?? "");
-  const fileRef = useRef<HTMLInputElement | null>(null);
   const bodyRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    setDraftTitle(step?.title ?? "");
-    setDraftInstructions(step?.instructions ?? "");
-    setEditing(false);
-  }, [step?.title, step?.instructions, stageIndex]);
 
   useEffect(() => {
     bodyRef.current?.scrollTo({ top: 0, behavior: "smooth" });
@@ -155,7 +77,6 @@ export function StageDeck({
   );
 
   const generatedCount = stages.filter((entry) => entry.content.trim().length > 0).length;
-  const progress = Math.round((generatedCount / steps.length) * 100);
   const canGoNext = stageIndex < steps.length - 1;
   const nextIsGenerated = stages.some((entry) => entry.index === stageIndex + 1 && entry.content.trim().length > 0);
   const deeperAvailable = capabilities.reasoning && reasoningEnabled;
@@ -163,213 +84,157 @@ export function StageDeck({
   async function copy(text: string) {
     try {
       await navigator.clipboard.writeText(text);
-      notify("info", "Copied to clipboard.");
+      notify("info", t("studio.toast.clipboard"));
     } catch {
-      notify("error", "Clipboard is not available in this browser.");
+      notify("error", t("studio.toast.clipboardUnavailable"));
     }
   }
 
   const stageBody = streamingHere ? run.text : (stage?.content ?? "");
   const stageResources = streamingHere && run.resources.length ? run.resources : (stage?.resources ?? []);
   const stageReasoning = streamingHere ? run.reasoning : (stage?.reasoning ?? "");
+  const askedCount = stageMessages.filter((message) => message.role === "user").length;
+  /* Prompt editor remounts (fresh drafts, closed panel) whenever the stage
+     or its step definition changes — see StageMeta. */
+  const promptKey = `${stageIndex}:${step?.title ?? ""}:${step?.instructions ?? ""}`;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {/* Session header --------------------------------------------------- */}
-      <div className="studio-header px-6 py-3.5">
-        <div className="header-meta">
-          <h1 className="header-title">{session.title}</h1>
-          <span className="chip">{session.configName}</span>
-          {agentOn ? <span className="chip chip-on">⚡ dynamic agent</span> : null}
-          {session.status === "completed" ? <span className="chip chip-on">complete</span> : null}
-        </div>
-
-        <div className="mt-3 flex items-center gap-1.5 overflow-x-auto pb-1">
-          {steps.map((entry, index) => {
-            const generated = stages.some((row) => row.index === index && row.content.trim().length > 0);
-            const reachable = generated || index === generatedCount || index <= session.currentStage + 1;
-            const active = index === stageIndex;
-            return (
-              <button
-                key={entry.id + index}
-                disabled={!reachable || busy}
-                onClick={() => onStageIndex(index)}
-                className="step-pill disabled:opacity-40"
-                data-active={active}
-                data-generated={generated}
-                title={entry.instructions}
-              >
-                <span className="step-dot" data-generated={generated}>
-                  {generated ? "✓" : index + 1}
-                </span>
-                <span className="max-w-[9rem] truncate">{entry.title}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="mt-2 flex items-center gap-3">
-          <div className="progress-track flex-1">
-            <span className="progress-bar" style={{ transform: `scaleX(${progress / 100})` }} />
-          </div>
-          <span className="font-mono text-[0.7rem] text-muted">
-            {generatedCount}/{steps.length} stages
-          </span>
-        </div>
-      </div>
+      <StageToolbar detail={detail} stageIndex={stageIndex} onStageIndex={onStageIndex} busy={busy} />
 
       {/* Stage body ------------------------------------------------------- */}
       <div ref={bodyRef} className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
         <div className="mx-auto max-w-3xl">
-          <div className="card stage-card animate-rise">
-            <div className="stage-toolbar">
-              <span className="label">
-                Stage {stageIndex + 1} / {steps.length}
-              </span>
-              <h2 className="font-serif text-base tracking-tight">{step?.title}</h2>
-              <div className="ml-auto flex items-center gap-1">
-                <button className="btn btn-ghost btn-xs" onClick={() => setEditing((value) => !value)} disabled={busy}>
-                  ✎ Edit prompt
-                </button>
-              </div>
-            </div>
+          <div key={stageIndex} className="stage-swap">
+            <div className="card stage-card" aria-busy={streamingHere}>
+              <StageMeta
+                key={promptKey}
+                step={step}
+                stageIndex={stageIndex}
+                stepsTotal={steps.length}
+                busy={busy}
+                onEditStep={onEditStep}
+                onGenerate={onGenerate}
+              />
 
-            {editing ? (
-              <div className="space-y-2 border-b border-line bg-surface2/40 px-5 py-3.5">
-                <input className="input" value={draftTitle} onChange={(event) => setDraftTitle(event.target.value)} />
-                <textarea
-                  className="textarea"
-                  rows={4}
-                  value={draftInstructions}
-                  onChange={(event) => setDraftInstructions(event.target.value)}
-                />
-                <div className="flex gap-2">
-                  <button
-                    className="btn btn-primary btn-xs"
-                    onClick={async () => {
-                      await onEditStep(stageIndex, draftTitle, draftInstructions);
-                      setEditing(false);
-                      await onGenerate(stageIndex, "none");
-                    }}
-                  >
-                    Save &amp; regenerate
-                  </button>
-                  <button
-                    className="btn btn-xs"
-                    onClick={async () => {
-                      await onEditStep(stageIndex, draftTitle, draftInstructions);
-                      setEditing(false);
-                    }}
-                  >
-                    Save only
-                  </button>
-                  <button className="btn btn-ghost btn-xs" onClick={() => setEditing(false)}>
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : null}
-
-            <div className="stage-body sm:p-8">
-              {streamingHere && !run.text ? (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-xs text-muted">
-                    <span className="dot-pulse flex gap-1">
-                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
-                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
-                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
-                    </span>
-                    {run.status || "Working…"}
-                  </div>
-                  <div className="skeleton h-4 w-3/4" />
-                  <div className="skeleton h-4 w-full" />
-                  <div className="skeleton h-4 w-5/6" />
-                  <div className="skeleton h-24 w-full" />
-                </div>
-              ) : stageBody ? (
-                <>
-                  {streamingHere ? (
-                    <div className="mb-3 flex items-center gap-2 text-[0.7rem] text-muted">
-                      <span className="status-dot" />
-                      {run.status || "Composing…"}
+              <div className="stage-body sm:p-8">
+                {streamingHere && !run.text ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-xs text-muted" role="status" aria-live="polite">
+                      <span className="dot-pulse flex gap-1" aria-hidden="true">
+                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
+                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
+                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
+                      </span>
+                      {run.status || t("studio.status.working")}
                     </div>
-                  ) : null}
-                  <Markdown>{stageBody}</Markdown>
-                  {streamingHere ? <span className="caret" /> : null}
-                </>
-              ) : (
-                <div className="py-12 text-center">
-                  <p className="mx-auto max-w-md text-sm leading-relaxed text-muted text-pretty">
-                    {stageIndex === 0
-                      ? "Ready when you are. The engine will open the session with this stage — nothing is generated in advance."
-                      : "This stage has not been generated yet. Stages are produced on demand, one at a time."}
-                  </p>
-                  <button className="btn btn-primary mt-4" disabled={busy} onClick={() => onGenerate(stageIndex, "none")}>
-                    {stageIndex === 0 ? "Begin stage 1" : `Generate stage ${stageIndex + 1}`}
+                    <div className="skeleton h-4 w-3/4" />
+                    <div className="skeleton h-4 w-full" />
+                    <div className="skeleton h-4 w-5/6" />
+                    <div className="skeleton h-24 w-full" />
+                  </div>
+                ) : stageBody ? (
+                  <>
+                    {streamingHere ? (
+                      <div className="mb-3 flex items-center gap-2 text-micro text-muted" role="status" aria-live="polite">
+                        <span className="status-dot" aria-hidden="true" />
+                        {run.status || t("studio.status.composing")}
+                      </div>
+                    ) : null}
+                    <Markdown>{stageBody}</Markdown>
+                    {streamingHere ? <span className="caret" /> : null}
+                  </>
+                ) : (
+                  <div className="py-12 text-center">
+                    <p className="mx-auto max-w-md text-sm leading-relaxed text-muted text-pretty">
+                      {stageIndex === 0 ? t("stage.emptyFirst") : t("stage.emptyRest")}
+                    </p>
+                    <button
+                      type="button"
+                      className="btn btn-primary mt-4"
+                      disabled={busy}
+                      onClick={() => onGenerate(stageIndex, "none")}
+                    >
+                      {stageIndex === 0 ? t("stage.begin") : t("stage.generate", { index: stageIndex + 1 })}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {stage && !streamingHere ? (
+                <div className="stage-footer">
+                  <button type="button" className="btn btn-xs" onClick={() => copy(stage.content)}>
+                    {t("stage.copy")}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-xs"
+                    disabled={busy}
+                    onClick={() => onGenerate(stageIndex, "none")}
+                  >
+                    {t("stage.regenerate")}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-xs"
+                    disabled={busy}
+                    onClick={() => onGenerate(stageIndex, "longer")}
+                  >
+                    {t("stage.longer")}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-xs"
+                    disabled={busy}
+                    onClick={() => onGenerate(stageIndex, "shorter")}
+                  >
+                    {t("stage.shorter")}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-xs"
+                    disabled={busy || !deeperAvailable}
+                    title={
+                      deeperAvailable ? t("stage.deeperTitle") : t("stage.deeperUnavailableTitle")
+                    }
+                    onClick={() => onGenerate(stageIndex, "deeper")}
+                  >
+                    {t("stage.deeper")}
                   </button>
                 </div>
-              )}
+              ) : null}
             </div>
-
-            {stage && !streamingHere ? (
-              <div className="stage-footer">
-                <button className="btn btn-xs" onClick={() => copy(stage.content)}>
-                  ⧉ Copy
-                </button>
-                <button className="btn btn-xs" disabled={busy} onClick={() => onGenerate(stageIndex, "none")}>
-                  ↻ Regenerate
-                </button>
-                <button className="btn btn-xs" disabled={busy} onClick={() => onGenerate(stageIndex, "longer")}>
-                  ＋ Longer
-                </button>
-                <button className="btn btn-xs" disabled={busy} onClick={() => onGenerate(stageIndex, "shorter")}>
-                  − Shorter
-                </button>
-                <button
-                  className="btn btn-xs"
-                  disabled={busy || !deeperAvailable}
-                  title={
-                    deeperAvailable
-                      ? "Regenerate with deeper reasoning"
-                      : "Deeper needs a reasoning-capable model with reasoning switched on"
-                  }
-                  onClick={() => onGenerate(stageIndex, "deeper")}
-                >
-                  ⌄ Deeper
-                </button>
-              </div>
-            ) : null}
           </div>
 
           {/* Reasoning + resources ------------------------------------------ */}
           <div className="mt-3 space-y-2">
             {reasoningEnabled ? (
-              <Collapsible title="Model reasoning" tone="accent">
+              <Collapsible title={t("stage.reasoning.title")} tone="accent">
                 {stageReasoning ? (
                   <pre className="max-h-72 overflow-auto whitespace-pre-wrap text-xs leading-relaxed text-muted">
                     {stageReasoning}
                   </pre>
                 ) : (
-                  <p className="text-xs leading-relaxed text-muted">
-                    This model did not return a reasoning trace for this stage. Nothing is invented here — if the
-                    provider does not expose reasoning, none is shown.
-                  </p>
+                  <p className="text-xs leading-relaxed text-muted">{t("stage.reasoning.empty")}</p>
                 )}
               </Collapsible>
             ) : null}
 
-            <Collapsible title="Sources used" count={stageResources.length}>
+            <Collapsible title={t("stage.sources.title")} count={stageResources.length}>
               <ResourceList resources={stageResources} />
             </Collapsible>
 
-            <Collapsible title="Learning state" tone="muted">
+            <Collapsible title={t("stage.state.title")} tone="muted">
               <div className="grid gap-3 text-xs sm:grid-cols-2">
                 <div>
-                  <div className="label">Understanding</div>
-                  <p className="mt-1 text-muted">{session.learningState.understanding || "Not assessed yet."}</p>
+                  <div className="label">{t("stage.state.understanding")}</div>
+                  <p className="mt-1 text-muted">
+                    {session.learningState.understanding || t("stage.state.notAssessed")}
+                  </p>
                   {session.learningState.nextFocus ? (
                     <>
-                      <div className="label mt-3">Next focus</div>
+                      <div className="label mt-3">{t("stage.state.nextFocus")}</div>
                       <p className="mt-1 text-muted">{session.learningState.nextFocus}</p>
                     </>
                   ) : null}
@@ -377,9 +242,9 @@ export function StageDeck({
                 <div className="space-y-3">
                   {(
                     [
-                      ["Mastered", session.learningState.mastered],
-                      ["Open gaps", session.learningState.gaps],
-                      ["Misconceptions", session.learningState.misconceptions],
+                      [t("stage.state.mastered"), session.learningState.mastered],
+                      [t("stage.state.gaps"), session.learningState.gaps],
+                      [t("stage.state.misconceptions"), session.learningState.misconceptions],
                     ] as [string, string[]][]
                   ).map(([label, values]) =>
                     values.length ? (
@@ -395,11 +260,14 @@ export function StageDeck({
                   )}
                   {session.learningState.checkpoints.length ? (
                     <div>
-                      <div className="label">Milestones</div>
+                      <div className="label">{t("stage.state.milestones")}</div>
                       <ul className="mt-1 space-y-0.5 text-muted">
                         {session.learningState.checkpoints.map((checkpoint) => (
                           <li key={checkpoint.label}>
-                            <span className="text-accent">{checkpoint.done ? "✓" : "○"}</span> {checkpoint.label}
+                            <span className="text-accent" aria-hidden="true">
+                              {checkpoint.done ? "✓" : "○"}
+                            </span>{" "}
+                            {checkpoint.label}
                           </li>
                         ))}
                       </ul>
@@ -407,7 +275,7 @@ export function StageDeck({
                   ) : null}
                   {session.learningState.agentNotes.length ? (
                     <div>
-                      <div className="label">Agent actions</div>
+                      <div className="label">{t("stage.state.agentActions")}</div>
                       <ul className="mt-1 list-disc pl-4 text-muted">
                         {session.learningState.agentNotes.slice(-5).map((note) => (
                           <li key={note}>{note}</li>
@@ -422,143 +290,41 @@ export function StageDeck({
 
           {/* Stage Q&A -------------------------------------------------------- */}
           {stage ? (
-            <section className="mt-8">
+            <section className="mt-8" aria-label={t("stage.qa.heading")}>
               <div className="mb-3 flex items-center gap-2">
-                <h3 className="font-serif text-base tracking-tight">Ask about this stage</h3>
-                <span className="chip">{stageMessages.filter((message) => message.role === "user").length} asked</span>
+                <h3 className="font-serif text-base tracking-tight">{t("stage.qa.heading")}</h3>
+                <span className="chip">{t("stage.qa.asked", { count: askedCount })}</span>
               </div>
 
-              <div className="thread">
-                {stageMessages.map((message, position) =>
-                  message.role === "user" ? (
-                    <div key={message.id} className="group flex items-center justify-end gap-1.5">
-                      <button
-                        className="btn btn-ghost btn-xs opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100"
-                        disabled={busy}
-                        onClick={() => setQuestion(message.content)}
-                        title="Edit this question and ask again"
-                      >
-                        ✎ Edit
-                      </button>
-                      <div className="msg msg-user">{message.content}</div>
-                    </div>
-                  ) : (
-                    <div key={message.id} className="msg msg-assistant">
-                      <div className="msg-head">Studio</div>
-                      <Markdown className="prose-compact">{message.content}</Markdown>
-                      <div className="msg-actions">
-                        <button className="btn btn-ghost btn-xs" onClick={() => copy(message.content)}>
-                          ⧉ Copy
-                        </button>
-                        {(() => {
-                          const asked = [...stageMessages.slice(0, position)].reverse().find((entry) => entry.role === "user");
-                          if (!asked) return null;
-                          return (
-                            <button
-                              className="btn btn-ghost btn-xs"
-                              disabled={busy}
-                              onClick={() => onAsk(stage!.id, asked.content)}
-                              title="Ask the same question again"
-                            >
-                              ↻ Regenerate
-                            </button>
-                          );
-                        })()}
-                        {message.resources.length ? (
-                          <span className="chip">{message.resources.length} sources</span>
-                        ) : null}
-                      </div>
-                    </div>
-                  ),
-                )}
-
-                {qaStreaming ? (
-                  <div className="msg msg-assistant">
-                    {run.text ? (
-                      <>
-                        <div className="msg-head">Studio</div>
-                        <Markdown className="prose-compact">{run.text}</Markdown>
-                        <span className="caret" />
-                      </>
-                    ) : (
-                      <div className="msg-thinking">
-                        <span className="dot-pulse flex gap-1">
-                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
-                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
-                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
-                        </span>
-                        {run.status || "Thinking…"}
-                      </div>
-                    )}
-                  </div>
-                ) : null}
+              <div aria-busy={qaStreamingActive(run, stageIndex)}>
+                <QaThread
+                  stageId={stage.id}
+                  stageIndex={stageIndex}
+                  stageMessages={stageMessages}
+                  run={run}
+                  busy={busy}
+                  onCopy={(text) => void copy(text)}
+                  onAsk={onAsk}
+                  onEditQuestion={setQuestion}
+                />
               </div>
 
-              <form
-                className="mt-3"
-                onSubmit={async (event) => {
-                  event.preventDefault();
-                  const value = question.trim();
-                  if (!value || busy) return;
-                  setQuestion("");
-                  await onAsk(stage.id, value);
-                }}
-              >
-                <div className="composer">
-                  <textarea
-                    className="composer-input"
-                    rows={2}
-                    placeholder="Ask anything about this stage — it stays attached to this stage, not a giant chat thread."
-                    value={question}
-                    disabled={busy}
-                    onChange={(event) => setQuestion(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-                        event.currentTarget.form?.requestSubmit();
-                      }
-                    }}
-                  />
-                  <div className="composer-actions">
-                    <span className="composer-hint">⌘ ↵ / Ctrl ↵ to send</span>
-                    <button className="btn btn-primary ml-auto" type="submit" disabled={busy || !question.trim()}>
-                      Ask
-                    </button>
-                  </div>
-                </div>
-              </form>
+              <ComposerForm
+                value={question}
+                onValueChange={setQuestion}
+                busy={busy}
+                placeholder={t("stage.qa.placeholder")}
+                onSubmit={(value) => onAsk(stage.id, value)}
+              />
 
               {/* Attachments */}
-              <div className="attach-row mt-3">
-                <input
-                  ref={fileRef}
-                  type="file"
-                  className="hidden"
-                  accept=".pdf,.doc,.docx,.md,.markdown,.txt,image/png,image/jpeg,image/webp,image/gif"
-                  onChange={async (event) => {
-                    const file = event.target.files?.[0];
-                    event.target.value = "";
-                    if (file) await onUpload(file);
-                  }}
-                />
-                <button className="btn btn-xs" onClick={() => fileRef.current?.click()} disabled={busy}>
-                  📎 Attach material
-                </button>
-                <span className="text-[0.68rem] text-muted">
-                  PDF, DOC/DOCX, Markdown, TXT{capabilities.vision ? " and images" : " (images need a vision model)"} · ZIP and JSON are rejected
-                </span>
-                {attachments.map((attachment) => (
-                  <span key={attachment.id} className="chip">
-                    {attachment.kind === "image" ? "🖼" : "📄"} {attachment.name}
-                    <button
-                      className="ml-1 text-muted hover:text-[var(--warn)]"
-                      onClick={() => onDeleteAttachment(attachment.id)}
-                      aria-label={`Remove ${attachment.name}`}
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
+              <AttachmentRow
+                attachments={attachments}
+                busy={busy}
+                visionAvailable={capabilities.vision}
+                onUpload={onUpload}
+                onDeleteAttachment={onDeleteAttachment}
+              />
             </section>
           ) : null}
 
@@ -571,18 +337,20 @@ export function StageDeck({
       {/* Navigation ------------------------------------------------------- */}
       <div className="nav-bar flex items-center gap-2 px-6 py-3.5">
         <button
+          type="button"
           className="btn"
           disabled={stageIndex === 0 || busy}
           onClick={() => onStageIndex(Math.max(0, stageIndex - 1))}
         >
-          ← Previous
+          {t("stage.nav.previous")}
         </button>
         <div className="mx-auto text-center text-xs text-muted">
           {step?.title}
-          {session.status === "completed" ? " · sequence complete" : ""}
+          {session.status === "completed" ? t("stage.nav.completeSuffix") : ""}
         </div>
         {canGoNext ? (
           <button
+            type="button"
             className="btn btn-primary"
             disabled={busy || !stage}
             onClick={async () => {
@@ -591,14 +359,16 @@ export function StageDeck({
               if (!nextIsGenerated) await onGenerate(next, "none");
             }}
           >
-            {nextIsGenerated ? "Next →" : "Generate next stage →"}
+            {nextIsGenerated ? t("stage.nav.next") : t("stage.nav.generateNext")}
           </button>
         ) : (
-          <span className="chip chip-on">final stage</span>
+          <span className="chip chip-on">{t("stage.nav.final")}</span>
         )}
       </div>
     </div>
   );
 }
 
-export type { StageRow };
+function qaStreamingActive(run: RunState | null, stageIndex: number): boolean {
+  return run?.mode === "qa" && run.stageIndex === stageIndex;
+}

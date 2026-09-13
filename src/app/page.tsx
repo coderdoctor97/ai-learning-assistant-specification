@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { t } from "@/lib/i18n";
+import { MotionGate } from "@/components/ui/MotionGate";
+import { RevealController } from "@/lib/motion";
 
 const pillars = [
   {
@@ -36,25 +39,31 @@ const assurances = ["No account", "No cloud sync", "Bring any model", "Export an
 
 export default function LandingPage() {
   return (
-    <main className="landing min-h-screen">
+    <main id="main-content" className="landing min-h-screen" tabIndex={-1}>
+      <RevealController />
       <div className="landing-canvas" aria-hidden="true" />
+
+      <a href="#main-content" className="skip-link">
+        {t("app.skipToContent")}
+      </a>
 
       {/* Navigation ---------------------------------------------------- */}
       <header className="site-nav glass">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-6 py-3.5">
           <Link href="/" className="brand">
-            Learning<em>Studio</em>
+            {t("app.brandFirst")}
+            <em>{t("app.brandSecond")}</em>
           </Link>
           <span className="chip chip-on hidden sm:inline-flex">local-first</span>
-          <nav className="ml-auto flex items-center gap-1">
+          <nav className="ml-auto flex items-center gap-1" aria-label="Primary">
             <Link href="/studio" className="nav-link">
-              Studio
+              {t("landing.nav.studio")}
             </Link>
             <Link href="/settings" className="nav-link">
-              Settings
+              {t("landing.nav.settings")}
             </Link>
             <Link href="/studio" className="btn btn-primary btn-xs ml-1.5">
-              Open studio
+              {t("landing.nav.openStudio")}
             </Link>
           </nav>
         </div>
@@ -63,31 +72,28 @@ export default function LandingPage() {
       {/* Hero ---------------------------------------------------------- */}
       <section className="mx-auto grid max-w-6xl items-center gap-12 px-6 pb-16 pt-16 lg:grid-cols-[1.08fr_0.92fr] lg:gap-16 lg:pb-24 lg:pt-24">
         <div>
-          <span className="chip chip-on reveal">Learning engine · local-first</span>
-          <h1 className="hero-title reveal mt-6" style={{ animationDelay: "70ms" }}>
+          <span className="chip chip-on reveal">{t("landing.hero.badge")}</span>
+          <h1 className="hero-title reveal reveal-d1 mt-6">
             Not a chat box.
             <br />
             <span className="text-gradient">A learning workflow that runs.</span>
           </h1>
-          <p className="lede reveal mt-6 max-w-xl" style={{ animationDelay: "140ms" }}>
+          <p className="lede reveal reveal-d2 mt-6 max-w-xl">
             Learning Studio is a configurable teaching harness. You choose the methodology, hand it a subject, and it
             executes the stages one at a time — diagnosing, teaching, questioning, correcting, drilling and consolidating
             — while keeping every session on your own machine.
           </p>
 
-          <div className="reveal mt-9 flex flex-wrap items-center gap-3" style={{ animationDelay: "210ms" }}>
-            <Link href="/studio" className="btn btn-primary px-5 py-3 text-sm">
-              Enter the Studio →
+          <div className="reveal reveal-d3 mt-9 flex flex-wrap items-center gap-3">
+            <Link href="/studio" className="btn btn-primary px-5 py-3 text-small">
+              {t("landing.hero.cta")}
             </Link>
-            <Link href="/settings" className="btn px-5 py-3 text-sm">
-              Configure providers
+            <Link href="/settings" className="btn px-5 py-3 text-small">
+              {t("landing.hero.ctaSecondary")}
             </Link>
           </div>
 
-          <ul
-            className="reveal mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted"
-            style={{ animationDelay: "280ms" }}
-          >
+          <ul className="reveal reveal-d4 mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted">
             {assurances.map((assurance) => (
               <li key={assurance} className="flex items-center gap-1.5">
                 <span className="text-accent" aria-hidden="true">
@@ -99,12 +105,12 @@ export default function LandingPage() {
           </ul>
         </div>
 
-        {/* Decorative product preview */}
-        <div className="reveal reveal-quick lg:justify-self-end lg:w-full" style={{ animationDelay: "170ms" }}>
+        {/* Decorative product preview — gated so its infinite loops pause offscreen */}
+        <MotionGate className="reveal reveal-quick reveal-d5 lg:justify-self-end lg:w-full">
           <div className="card-elevated lift lift-strong showcase" aria-hidden="true">
             <div className="showcase-head">
               <span className="status-dot" />
-              <span className="label">Stage in progress</span>
+              <span className="label">{t("landing.showcase.stageLabel")}</span>
               <span className="chip ml-auto">03 / 06</span>
             </div>
             <h2 className="panel-title mt-3.5">Questioning — retrieval check</h2>
@@ -124,31 +130,27 @@ export default function LandingPage() {
                 Why does the loop of Henle need two limbs to concentrate urine?
               </div>
               <div className="mock-bubble mock-bubble-ai">
-                <div className="mock-line skeleton" style={{ width: "94%" }} />
-                <div className="mock-line skeleton mt-2" style={{ width: "78%" }} />
-                <div className="mock-line skeleton mt-2" style={{ width: "61%" }} />
+                <div className="mock-line skeleton w-[94%]" />
+                <div className="mock-line skeleton mt-2 w-[78%]" />
+                <div className="mock-line skeleton mt-2 w-[61%]" />
               </div>
             </div>
           </div>
-        </div>
+        </MotionGate>
       </section>
 
       {/* Pillars ------------------------------------------------------- */}
       <section className="mx-auto max-w-6xl px-6 py-10">
         <div className="section-rule">
-          <span className="label">How it runs</span>
+          <span className="label">{t("landing.pillars.heading")}</span>
         </div>
-        <h2 className="section-title reveal mt-5 max-w-2xl" style={{ animationDelay: "60ms" }}>
-          Pick a method, name a subject, work through it.
+        <h2 className="section-title reveal reveal-d6 mt-5 max-w-2xl">
+          {t("landing.pillars.title")}
         </h2>
 
-        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+        <div className="reveal-stagger mt-8 grid gap-4 sm:grid-cols-3">
           {pillars.map((pillar, index) => (
-            <article
-              key={pillar.title}
-              className="card lift panel reveal"
-              style={{ animationDelay: `${120 + index * 70}ms` }}
-            >
+            <article key={pillar.title} className="card lift panel" data-reveal>
               <div className="index-mark">0{index + 1}</div>
               <h3 className="panel-title mt-3">{pillar.title}</h3>
               <p className="panel-body mt-2">{pillar.body}</p>
@@ -160,12 +162,12 @@ export default function LandingPage() {
       {/* Facts --------------------------------------------------------- */}
       <section className="mx-auto max-w-6xl px-6 py-10">
         <div className="section-rule">
-          <span className="label">Why it holds up</span>
+          <span className="label">{t("landing.facts.heading")}</span>
         </div>
 
-        <dl className="mt-8 grid gap-4 sm:grid-cols-2">
+        <dl className="reveal-stagger mt-8 grid gap-4 sm:grid-cols-2">
           {facts.map(([term, description], index) => (
-            <div key={term} className="card lift panel reveal" style={{ animationDelay: `${80 + index * 70}ms` }}>
+            <div key={term} className="card lift panel" data-reveal>
               <dt className="flex items-baseline gap-2.5">
                 <span className="index-mark">0{index + 1}</span>
                 <span className="panel-title">{term}</span>
@@ -178,19 +180,19 @@ export default function LandingPage() {
 
       {/* Closing call to action ---------------------------------------- */}
       <section className="mx-auto max-w-6xl px-6 pb-10 pt-16">
-        <div className="card-elevated cta-band reveal">
-          <span className="chip chip-on">start where you are</span>
-          <h2 className="display-title mx-auto mt-5 max-w-2xl">The first stage is generated the moment you begin.</h2>
+        <div className="card-elevated cta-band" data-reveal>
+          <span className="chip chip-on">{t("landing.cta.badge")}</span>
+          <h2 className="display-title mx-auto mt-5 max-w-2xl">{t("landing.cta.title")}</h2>
           <p className="lede mx-auto mt-4 max-w-xl">
             Nothing is queued up in advance. The engine opens the session with stage one, then waits for you to ask for
             the next one — with your questions staying attached to the stage you asked them in.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Link href="/studio" className="btn btn-primary px-5 py-3 text-sm">
-              Enter the Studio →
+            <Link href="/studio" className="btn btn-primary px-5 py-3 text-small">
+              {t("landing.hero.cta")}
             </Link>
-            <Link href="/settings" className="btn px-5 py-3 text-sm">
-              Configure providers
+            <Link href="/settings" className="btn px-5 py-3 text-small">
+              {t("landing.hero.ctaSecondary")}
             </Link>
           </div>
         </div>
@@ -199,13 +201,14 @@ export default function LandingPage() {
       {/* Footer -------------------------------------------------------- */}
       <footer className="site-footer">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-6 py-7">
-          <span className="brand text-sm">
-            Learning<em>Studio</em>
+          <span className="brand text-small">
+            {t("app.brandFirst")}
+            <em>{t("app.brandSecond")}</em>
           </span>
           <span>
-            Every session stays on this machine — <span className="font-mono">.data/studio.db</span>
+            {t("landing.footer.storage")} <span className="font-mono">.data/studio.db</span>
           </span>
-          <span className="ml-auto font-mono">local-first · model-independent</span>
+          <span className="ml-auto font-mono">{t("landing.footer.tagline")}</span>
         </div>
       </footer>
     </main>

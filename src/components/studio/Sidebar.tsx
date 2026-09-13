@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Popover, handleMenuItemKeys, usePopover } from "@/components/ui/Popover";
+import { MiniProgressBar } from "@/components/ui/ProgressBar";
+import { useMediaQuery } from "@/lib/useMediaQuery";
+import { formatDate, t, tPlural } from "@/lib/i18n";
 import { api, type AppState, type SessionSummary } from "@/lib/client/api";
 
 type Props = {
@@ -13,26 +17,210 @@ type Props = {
   onNew: () => void;
   onRefresh: () => Promise<void>;
   notify: (kind: "error" | "info", message: string) => void;
+  /** Mobile drawer state (below md the expanded sidebar is an overlay). */
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
+  /** Opens the mobile drawer from the rail trigger. */
+  onMobileOpen?: () => void;
 };
+
+type Act = (action: () => Promise<unknown>, message?: string) => Promise<void>;
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const minutes = Math.round(diff / 60000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 1) return t("sidebar.time.justNow");
+  if (minutes < 60) return t("sidebar.time.minutes", { count: minutes });
   const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return t("sidebar.time.hours", { count: hours });
   const days = Math.round(hours / 24);
-  if (days < 30) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString();
+  if (days < 30) return t("sidebar.time.days", { count: days });
+  return formatDate(iso);
 }
 
-export function Sidebar({ state, activeId, collapsed, onToggleCollapse, onSelect, onNew, onRefresh, notify }: Props) {
+function SessionMenuItems({
+  session,
+  state,
+  act,
+}: {
+  session: SessionSummary;
+  state: AppState;
+  act: Act;
+}) {
+  const { dismiss } = usePopover();
+  return (
+    <Popover.Content
+      className="menu-surface absolute right-1 top-8 text-xs"
+      role="menu"
+      ariaLabel={t("sidebar.session.actions")}
+      onKeyDown={handleMenuItemKeys}
+    >
+      <button
+        type="button"
+        role="menuitem"
+        className="menu-item"
+        onClick={async () => {
+          await act(() => api.patchSession(session.id, { pinned: !session.pinned }));
+          dismiss();
+        }}
+      >
+        {session.pinned ? t("sidebar.session.unpin") : t("sidebar.session.pin")}
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        className="menu-item"
+        onClick={async () => {
+          const title = window.prompt(t("sidebar.session.renamePrompt"), session.title);
+          if (title?.trim()) {
+            await act(() => api.patchSession(session.id, { title: title.trim() }));
+            dismiss();
+          } else {
+            dismiss();
+          }
+        }}
+      >
+        {t("sidebar.session.rename")}
+      </button>
+      {state.projects.length ? (
+        <div className="px-2 py-1" role="none">
+          <div className="label mb-1">{t("sidebar.session.move")}</div>
+          <select
+            className="select text-xs"
+            aria-label={t("sidebar.session.move")}
+            value={session.projectId ?? ""}
+            onChange={(event) =>
+              act(() => api.patchSession(session.id, { projectId: event.target.value || null }))
+            }
+          >
+            <option value="">{t("sidebar.session.noProject")}</option>
+            {state.projects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
+      <button
+        type="button"
+        role="menuitem"
+        className="menu-item"
+        data-danger="true"
+        onClick={async () => {
+          if (window.confirm(t("sidebar.session.deleteConfirm", { title: session.title }))) {
+            await act(() => api.deleteSession(session.id), t("sidebar.session.deleted"));
+          }
+          dismiss();
+        }}
+      >
+        {t("sidebar.session.delete")}
+      </button>
+    </Popover.Content>
+  );
+}
+
+function SessionMenu({
+  session,
+  state,
+  act,
+}: {
+  session: SessionSummary;
+  state: AppState;
+  act: Act;
+}) {
+  return (
+    <Popover.Root>
+      <Popover.Trigger
+        className="icon-btn absolute right-0.5 top-0.5 z-20 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
+        hasPopup="menu"
+        title={t("sidebar.session.actions")}
+        aria-label={t("sidebar.session.actions")}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <span aria-hidden="true">⋯</span>
+      </Popover.Trigger>
+      <SessionMenuItems session={session} state={state} act={act} />
+    </Popover.Root>
+  );
+}
+
+function SessionRow({
+  session,
+  state,
+  activeId,
+  onSelect,
+  act,
+}: {
+  session: SessionSummary;
+  state: AppState;
+  activeId: string | null;
+  onSelect: (id: string) => void;
+  act: Act;
+}) {
+  const progress = session.stageCount ? Math.round(((session.currentStage + 1) / session.stageCount) * 100) : 0;
+  const done = session.status === "completed";
+  return (
+    <div className="group relative">
+      <button
+        type="button"
+        className="sidebar-item"
+        data-active={session.id === activeId}
+        onClick={() => onSelect(session.id)}
+        title={session.topic}
+      >
+        <div className="flex items-center gap-1.5">
+          {session.pinned ? (
+            <span className="text-nano text-accent" aria-label={t("sidebar.pinned")}>
+              ★
+            </span>
+          ) : null}
+          <span className="truncate">{session.title}</span>
+        </div>
+        <div className="mt-1 flex items-center gap-2 text-micro text-muted">
+          <MiniProgressBar ratio={(done ? 100 : progress) / 100} />
+          <span>{done ? t("sidebar.session.complete") : `${session.currentStage + 1}/${session.stageCount}`}</span>
+          <span className="ml-auto">{timeAgo(session.updatedAt)}</span>
+        </div>
+      </button>
+      <SessionMenu session={session} state={state} act={act} />
+    </div>
+  );
+}
+
+export function Sidebar({
+  state,
+  activeId,
+  collapsed,
+  onToggleCollapse,
+  onSelect,
+  onNew,
+  onRefresh,
+  notify,
+  mobileOpen = false,
+  onMobileClose,
+  onMobileOpen,
+}: Props) {
   const [query, setQuery] = useState("");
-  const [menuFor, setMenuFor] = useState<string | null>(null);
   const [projectFilter, setProjectFilter] = useState<string | null>(null);
   const [creatingProject, setCreatingProject] = useState(false);
   const [projectName, setProjectName] = useState("");
+  const isMobile = useMediaQuery("(max-width: 767px)");
+  const panelRef = useRef<HTMLElement | null>(null);
+
+  const drawerMode = isMobile && mobileOpen;
+
+  // Escape closes the mobile drawer; opening moves focus into the panel.
+  useEffect(() => {
+    if (!drawerMode) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      onMobileClose?.();
+    }
+    document.addEventListener("keydown", onKeyDown);
+    panelRef.current?.focus();
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [drawerMode, onMobileClose]);
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -56,237 +244,227 @@ export function Sidebar({ state, activeId, collapsed, onToggleCollapse, onSelect
       await onRefresh();
       if (message) notify("info", message);
     } catch (error) {
-      notify("error", error instanceof Error ? error.message : "Action failed.");
-    } finally {
-      setMenuFor(null);
+      notify("error", error instanceof Error ? error.message : t("settings.toast.actionFailed"));
     }
   }
 
-  if (collapsed) {
+  function handleSelect(id: string) {
+    onSelect(id);
+    onMobileClose?.();
+  }
+
+  function handleNew() {
+    onNew();
+    onMobileClose?.();
+  }
+
+  const showRail = isMobile ? !drawerMode : collapsed;
+
+  if (showRail) {
     return (
       <aside className="flex w-14 shrink-0 flex-col items-center gap-3 border-r border-line bg-surface py-4">
-        <button className="btn btn-ghost px-2" onClick={onToggleCollapse} title="Expand sidebar" aria-label="Expand sidebar">
-          ☰
+        <button
+          type="button"
+          className="icon-btn"
+          onClick={isMobile ? () => onMobileOpen?.() : onToggleCollapse}
+          title={t("sidebar.expand")}
+          aria-label={t("sidebar.expand")}
+          aria-expanded={isMobile ? true : !collapsed}
+        >
+          <span aria-hidden="true">☰</span>
         </button>
-        <button className="btn btn-primary px-2" onClick={onNew} title="New learning session" aria-label="New session">
-          +
+        <button
+          type="button"
+          className="icon-btn bg-accent text-on-accent"
+          onClick={handleNew}
+          title={t("sidebar.newSessionShort")}
+          aria-label={t("sidebar.newSessionShort")}
+        >
+          <span aria-hidden="true">＋</span>
         </button>
         <div className="mt-auto">
-          <Link href="/settings" className="btn btn-ghost px-2" title="Settings">
-            ⚙
+          <Link href="/settings" className="icon-btn" title={t("sidebar.settings")}>
+            <span aria-hidden="true">⚙</span>
           </Link>
         </div>
       </aside>
     );
   }
 
-  const SessionRow = ({ session }: { session: SessionSummary }) => {
-    const progress = session.stageCount ? Math.round(((session.currentStage + 1) / session.stageCount) * 100) : 0;
-    const done = session.status === "completed";
-    return (
-      <div className="group relative">
-        <button
-          className="sidebar-item"
-          data-active={session.id === activeId}
-          onClick={() => onSelect(session.id)}
-          title={session.topic}
-        >
-          <div className="flex items-center gap-1.5">
-            {session.pinned ? <span className="text-[0.65rem] text-accent">★</span> : null}
-            <span className="truncate">{session.title}</span>
-          </div>
-          <div className="mt-1 flex items-center gap-2 text-[0.68rem] text-muted">
-            <span className="inline-block h-1 w-12 overflow-hidden rounded-full bg-surface2">
-              <span className="progress-bar" style={{ transform: `scaleX(${(done ? 100 : progress) / 100})` }} />
-            </span>
-            <span>{done ? "complete" : `${session.currentStage + 1}/${session.stageCount}`}</span>
-            <span className="ml-auto">{timeAgo(session.updatedAt)}</span>
-          </div>
-        </button>
-        <button
-          className="absolute right-1 top-1 rounded px-1.5 py-0.5 text-xs text-muted opacity-0 transition group-hover:opacity-100 hover:bg-surface2"
-          onClick={(event) => {
-            event.stopPropagation();
-            setMenuFor(menuFor === session.id ? null : session.id);
-          }}
-          aria-label="Session actions"
-        >
-          ⋯
-        </button>
-        {menuFor === session.id ? (
-          <div className="card absolute right-1 top-7 z-30 w-48 p-1 text-xs">
-            <button
-              className="sidebar-item"
-              onClick={() => act(() => api.patchSession(session.id, { pinned: !session.pinned }))}
-            >
-              {session.pinned ? "Unpin" : "Pin to top"}
-            </button>
-            <button
-              className="sidebar-item"
-              onClick={() => {
-                const title = window.prompt("Rename session", session.title);
-                if (title?.trim()) void act(() => api.patchSession(session.id, { title: title.trim() }));
-                else setMenuFor(null);
-              }}
-            >
-              Rename
-            </button>
-            {state.projects.length ? (
-              <div className="px-2 py-1">
-                <div className="label mb-1">Move to project</div>
-                <select
-                  className="select text-xs"
-                  value={session.projectId ?? ""}
-                  onChange={(event) =>
-                    act(() => api.patchSession(session.id, { projectId: event.target.value || null }))
-                  }
-                >
-                  <option value="">No project</option>
-                  {state.projects.map((project) => (
-                    <option key={project.id} value={project.id}>
-                      {project.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : null}
-            <button
-              className="sidebar-item text-[var(--warn)]"
-              onClick={() => {
-                if (window.confirm(`Delete "${session.title}"? This cannot be undone.`)) {
-                  void act(() => api.deleteSession(session.id), "Session deleted.");
-                } else setMenuFor(null);
-              }}
-            >
-              Delete
-            </button>
-          </div>
-        ) : null}
-      </div>
-    );
-  };
-
   return (
-    <aside className="flex w-72 shrink-0 flex-col border-r border-line bg-surface">
-      <div className="flex items-center gap-2 px-3 py-3">
-        <Link href="/" className="font-serif text-[0.95rem] font-semibold tracking-tight">
-          Learning<span className="text-accent">Studio</span>
-        </Link>
-        <button
-          className="btn btn-ghost btn-xs ml-auto"
-          onClick={onToggleCollapse}
-          title="Collapse sidebar"
-          aria-label="Collapse sidebar"
-        >
-          ⟨
-        </button>
-      </div>
-
-      <div className="space-y-2 px-3 pb-3">
-        <button className="btn btn-primary w-full" onClick={onNew}>
-          + New learning session
-        </button>
-        <input
-          className="input"
-          placeholder="Search sessions…"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
-        <div className="mb-1 flex items-center justify-between">
-          <span className="label">Projects</span>
-          <button className="btn btn-ghost btn-xs" onClick={() => setCreatingProject((value) => !value)}>
-            +
-          </button>
-        </div>
-        {creatingProject ? (
-          <form
-            className="mb-2 flex gap-1"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (!projectName.trim()) return;
-              void act(() => api.createProject({ name: projectName.trim() }));
-              setProjectName("");
-              setCreatingProject(false);
-            }}
+    <>
+      <aside
+        ref={panelRef}
+        className="sidebar-panel flex w-72 shrink-0 flex-col border-r border-line bg-surface outline-none"
+        data-drawer-open={drawerMode}
+        tabIndex={-1}
+      >
+        <div className="flex items-center gap-2 px-3 py-3">
+          <Link href="/" className="font-serif text-small font-semibold tracking-tight">
+            {t("app.brandFirst")}
+            <span className="text-accent">{t("app.brandSecond")}</span>
+          </Link>
+          <button
+            type="button"
+            className="icon-btn ml-auto"
+            onClick={isMobile ? onMobileClose : onToggleCollapse}
+            title={t("sidebar.collapse")}
+            aria-label={t("sidebar.collapse")}
           >
-            <input
-              className="input text-xs"
-              autoFocus
-              placeholder="Project name"
-              value={projectName}
-              onChange={(event) => setProjectName(event.target.value)}
-            />
-            <button className="btn btn-xs" type="submit">
-              Add
-            </button>
-          </form>
-        ) : null}
-        <div className="mb-3 space-y-0.5">
-          <button className="sidebar-item" data-active={projectFilter === null} onClick={() => setProjectFilter(null)}>
-            All sessions <span className="text-[0.68rem] text-muted">({state.sessions.length})</span>
+            <span aria-hidden="true">⟨</span>
           </button>
-          {state.projects.map((project) => {
-            const count = state.sessions.filter((session) => session.projectId === project.id).length;
-            return (
-              <div key={project.id} className="group relative">
-                <button
-                  className="sidebar-item"
-                  data-active={projectFilter === project.id}
-                  onClick={() => setProjectFilter(projectFilter === project.id ? null : project.id)}
-                >
-                  {project.name} <span className="text-[0.68rem] text-muted">({count})</span>
-                </button>
-                <button
-                  className="absolute right-1 top-1.5 rounded px-1 text-[0.7rem] text-muted opacity-0 transition group-hover:opacity-100"
-                  onClick={() => {
-                    if (window.confirm(`Delete project "${project.name}"? Sessions are kept.`)) {
-                      void act(() => api.deleteProject(project.id));
-                      setProjectFilter(null);
-                    }
-                  }}
-                  aria-label="Delete project"
-                >
-                  ×
-                </button>
+        </div>
+
+        <div className="space-y-2 px-3 pb-3">
+          <button type="button" className="btn btn-primary w-full" onClick={handleNew}>
+            + {t("sidebar.newSession")}
+          </button>
+          <input
+            className="input"
+            type="search"
+            placeholder={t("sidebar.search")}
+            aria-label={t("sidebar.search")}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
+          <div className="mb-1 flex items-center justify-between">
+            <span className="label">{t("sidebar.projects")}</span>
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={() => setCreatingProject((value) => !value)}
+              aria-expanded={creatingProject}
+              aria-label={t("sidebar.projects.add")}
+              title={t("sidebar.projects.add")}
+            >
+              <span aria-hidden="true">＋</span>
+            </button>
+          </div>
+          {creatingProject ? (
+            <form
+              className="mb-2 flex gap-1"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (!projectName.trim()) return;
+                void act(() => api.createProject({ name: projectName.trim() }));
+                setProjectName("");
+                setCreatingProject(false);
+              }}
+            >
+              <input
+                className="input text-xs"
+                autoFocus
+                placeholder={t("sidebar.projects.placeholder")}
+                aria-label={t("sidebar.projects.placeholder")}
+                value={projectName}
+                onChange={(event) => setProjectName(event.target.value)}
+              />
+              <button className="btn btn-xs" type="submit">
+                {t("sidebar.projects.add")}
+              </button>
+            </form>
+          ) : null}
+          <div className="mb-3 space-y-0.5">
+            <button
+              type="button"
+              className="sidebar-item"
+              data-active={projectFilter === null}
+              onClick={() => setProjectFilter(null)}
+            >
+              {t("sidebar.projects.all")} <span className="text-micro text-muted">({state.sessions.length})</span>
+            </button>
+            {state.projects.map((project) => {
+              const count = state.sessions.filter((session) => session.projectId === project.id).length;
+              return (
+                <div key={project.id} className="group relative">
+                  <button
+                    type="button"
+                    className="sidebar-item"
+                    data-active={projectFilter === project.id}
+                    onClick={() => setProjectFilter(projectFilter === project.id ? null : project.id)}
+                  >
+                    {project.name} <span className="text-micro text-muted">({count})</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="icon-btn absolute right-0 top-0.5 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
+                    onClick={async () => {
+                      if (window.confirm(t("sidebar.project.deleteConfirm", { name: project.name }))) {
+                        await act(() => api.deleteProject(project.id));
+                        setProjectFilter(null);
+                      }
+                    }}
+                    aria-label={`${t("sidebar.session.delete")}: ${project.name}`}
+                  >
+                    <span aria-hidden="true">×</span>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          {pinned.length ? (
+            <>
+              <div className="label mb-1">{t("sidebar.pinned")}</div>
+              <div className="mb-3 space-y-0.5">
+                {pinned.map((session) => (
+                  <SessionRow
+                    key={session.id}
+                    session={session}
+                    state={state}
+                    activeId={activeId}
+                    onSelect={handleSelect}
+                    act={act}
+                  />
+                ))}
               </div>
-            );
-          })}
+            </>
+          ) : null}
+
+          <div className="label mb-1">{t("sidebar.history")}</div>
+          <div className="space-y-0.5">
+            {rest.length ? (
+              rest.map((session) => (
+                <SessionRow
+                  key={session.id}
+                  session={session}
+                  state={state}
+                  activeId={activeId}
+                  onSelect={handleSelect}
+                  act={act}
+                />
+              ))
+            ) : (
+              <p className="px-1 py-4 text-xs leading-relaxed text-muted">
+                {state.sessions.length ? t("sidebar.history.noMatch") : t("sidebar.history.empty")}
+              </p>
+            )}
+          </div>
         </div>
 
-        {pinned.length ? (
-          <>
-            <div className="label mb-1">Pinned</div>
-            <div className="mb-3 space-y-0.5">
-              {pinned.map((session) => (
-                <div key={session.id}>{SessionRow({ session })}</div>
-              ))}
-            </div>
-          </>
-        ) : null}
-
-        <div className="label mb-1">History</div>
-        <div className="space-y-0.5">
-          {rest.length ? (
-            rest.map((session) => <div key={session.id}>{SessionRow({ session })}</div>)
-          ) : (
-            <p className="px-1 py-4 text-xs leading-relaxed text-muted">
-              {state.sessions.length ? "No sessions match that search." : "No sessions yet. Start one above."}
-            </p>
-          )}
+        <div className="border-t border-line p-3">
+          <Link href="/settings" className="btn w-full justify-start" onClick={() => onMobileClose?.()}>
+            <span className="text-muted" aria-hidden="true">
+              ⚙
+            </span>{" "}
+            {t("sidebar.settings")}
+          </Link>
+          <p className="mt-2 px-1 text-micro leading-relaxed text-muted">
+            {tPlural("sidebar.storedLocally", state.sessions.length)}
+          </p>
         </div>
-      </div>
-
-      <div className="border-t border-line p-3">
-        <Link href="/settings" className="btn w-full justify-start">
-          <span className="text-muted">⚙</span> Settings &amp; providers
-        </Link>
-        <p className="mt-2 px-1 text-[0.68rem] leading-relaxed text-muted">
-          Stored locally · {state.sessions.length} session{state.sessions.length === 1 ? "" : "s"} kept on this machine
-        </p>
-      </div>
-    </aside>
+      </aside>
+      {drawerMode ? (
+        <button
+          type="button"
+          className="sidebar-backdrop"
+          aria-label={t("sidebar.collapse")}
+          onClick={() => onMobileClose?.()}
+        />
+      ) : null}
+    </>
   );
 }

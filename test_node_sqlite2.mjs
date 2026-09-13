@@ -1,1 +1,7 @@
-import { DatabaseSync } from 'node:sqlite';\nconst db = new DatabaseSync(':memory:');\ndb.exec('CREATE TABLE t (id text primary key, n integer)');\ndb.exec('INSERT INTO t values (?, ?)', ['a', 1]);\nconst rows = db.prepare('SELECT id, n FROM t').all();\nconsole.log('rows', JSON.stringify(rows));\nconsole.log('ok');
+import { DatabaseSync } from 'node:sqlite';
+const db = new DatabaseSync(':memory:');
+db.exec('CREATE TABLE t (id text primary key, n integer)');
+db.exec('INSERT INTO t values (?, ?)', ['a', 1]);
+const rows = db.prepare('SELECT id, n FROM t').all();
+console.log('rows', JSON.stringify(rows));
+console.log('ok');
