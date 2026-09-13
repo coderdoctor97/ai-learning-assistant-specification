@@ -171,7 +171,18 @@ export function toHtml(doc: StudyDocument, options: { print?: boolean } = {}): s
   img { max-width: 100%; border-radius: 10px; }
   a { color: #9a5b3c; }
   em { color: #6b5a4d; }
-  @media print { body { background: #fff; } main { padding: 0; max-width: none; } h2 { break-after: avoid; } }
+  @page { margin: 18mm 16mm; }
+  @media print {
+    body { background: #fff; }
+    main { padding: 0; max-width: none; }
+    h2 { break-after: avoid; }
+    h3 { break-after: avoid; }
+    pre, blockquote, table, img, ul, ol { break-inside: avoid; }
+    pre, th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    a { text-decoration-color: #c08a6a; }
+    tr { break-inside: avoid; }
+    thead { display: table-header-group; }
+  }
 </style>
 </head>
 <body>

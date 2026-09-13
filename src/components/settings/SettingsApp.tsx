@@ -1,58 +1,295 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-import { api, type AppState, type ConfigRow, type LearningStep, type ProviderRow } from "@/lib/client/api";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ProviderCard } from "@/components/settings/ProviderCard";
+import { t } from "@/lib/i18n";
+import { applyTheme } from "@/lib/theme";
+import { api, type AppState, type ConfigRow, type LearningStep } from "@/lib/client/api";
 
 type Tab = "providers" | "methodologies" | "learner" | "skills" | "data";
 
-const TABS: { key: Tab; label: string }[] = [
-  { key: "providers", label: "Providers & models" },
-  { key: "methodologies", label: "Methodologies" },
-  { key: "learner", label: "Learner & generation" },
-  { key: "skills", label: "Skills" },
-  { key: "data", label: "Local data" },
+const TABS: { key: Tab; labelKey: "settings.tab.providers" | "settings.tab.methodologies" | "settings.tab.learner" | "settings.tab.skills" | "settings.tab.data" }[] = [
+  { key: "providers", labelKey: "settings.tab.providers" },
+  { key: "methodologies", labelKey: "settings.tab.methodologies" },
+  { key: "learner", labelKey: "settings.tab.learner" },
+  { key: "skills", labelKey: "settings.tab.skills" },
+  { key: "data", labelKey: "settings.tab.data" },
 ];
 
 function newStep(): LearningStep {
-  return { id: crypto.randomUUID(), title: "New step", instructions: "" };
+  return { id: crypto.randomUUID(), title: t("settings.methodology.newStep"), instructions: "" };
+}
+
+/* Initial-load skeleton mirroring the settings geometry. */
+function SettingsSkeleton() {
+  return (
+    <div className="mx-auto max-w-5xl px-6 py-8" aria-busy="true" aria-label={t("settings.loading")}>
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="skeleton h-8 w-24" />
+        <div className="skeleton h-8 w-32" />
+        <div className="skeleton h-6 w-72" />
+      </div>
+      <div className="mt-5 flex gap-2 border-b border-line pb-2">
+        {TABS.map((entry) => (
+          <div key={entry.key} className="skeleton h-8 w-36" />
+        ))}
+      </div>
+      <div className="space-y-3 py-6" role="status" aria-live="polite">
+        <span className="sr-only">{t("settings.loading")}</span>
+        {[0, 1, 2].map((row) => (
+          <div key={row} className="card space-y-3 p-4">
+            <div className="skeleton-row">
+              <div className="skeleton h-3 w-3 rounded-full" />
+              <div className="skeleton h-5 w-40" />
+              <div className="skeleton ml-auto h-8 w-28" />
+            </div>
+            <div className="skeleton h-3 w-2/3" />
+            <div className="skeleton h-9 w-full" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MethodologyEditor({
+  config,
+  draft,
+  setDraft,
+  setEditorId,
+  guard,
+}: {
+  config: ConfigRow | null;
+  draft: { name: string; description: string; steps: LearningStep[] };
+  setDraft: React.Dispatch<React.SetStateAction<{ name: string; description: string; steps: LearningStep[] } | null>>;
+  setEditorId: (id: string | null) => void;
+  guard: (action: () => Promise<unknown>, message?: string) => Promise<void>;
+}) {
+  if (!draft) return null;
+  const readOnly = Boolean(config?.builtIn);
+  return (
+    <div className="card p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          className="input max-w-xs"
+          value={draft.name}
+          disabled={readOnly}
+          aria-label={t("settings.methodology.newStep")}
+          onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+        />
+        <span className="chip">{t("settings.methodology.steps", { count: draft.steps.length })}</span>
+        {readOnly ? <span className="chip">{t("settings.methodology.readOnly")}</span> : null}
+        <div className="ml-auto flex gap-1.5">
+          {readOnly ? (
+            <button
+              type="button"
+              className="btn btn-xs btn-primary"
+              onClick={() =>
+                guard(async () => {
+                  const created = await api.createConfig({
+                    name: `${draft.name} (copy)`,
+                    description: draft.description,
+                    steps: draft.steps.map((step) => ({ ...step, id: crypto.randomUUID() })),
+                  });
+                  setEditorId(created.config.id);
+                  setDraft({
+                    name: created.config.name,
+                    description: created.config.description,
+                    steps: created.config.steps,
+                  });
+                }, t("settings.methodology.duplicated"))
+              }
+            >
+              {t("settings.methodology.duplicate")}
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="btn btn-xs btn-primary"
+                onClick={() =>
+                  guard(
+                    () =>
+                      api.patchConfig({
+                        id: config!.id,
+                        name: draft.name,
+                        description: draft.description,
+                        steps: draft.steps,
+                      }),
+                    t("settings.methodology.saved"),
+                  )
+                }
+              >
+                {t("settings.methodology.save")}
+              </button>
+              <button
+                type="button"
+                className="btn btn-xs"
+                onClick={() => {
+                  if (window.confirm(t("settings.methodology.deleteConfirm", { name: draft.name }))) {
+                    void guard(async () => {
+                      await api.deleteConfig(config!.id);
+                      setEditorId(null);
+                      setDraft(null);
+                    }, t("settings.methodology.deleted"));
+                  }
+                }}
+              >
+                {t("settings.methodology.delete")}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      <input
+        className="input mt-2 text-xs"
+        placeholder={t("settings.methodology.descriptionPlaceholder")}
+        aria-label={t("settings.methodology.descriptionPlaceholder")}
+        disabled={readOnly}
+        value={draft.description}
+        onChange={(event) => setDraft({ ...draft, description: event.target.value })}
+      />
+
+      <div className="mt-4 space-y-3">
+        {draft.steps.map((step, index) => (
+          <div key={step.id} className="rounded-xl border border-line bg-surface-muted p-3">
+            <div className="flex items-center gap-2">
+              <span className="step-badge" aria-hidden="true">
+                {index + 1}
+              </span>
+              <input
+                className="input text-sm"
+                value={step.title}
+                disabled={readOnly}
+                aria-label={`${t("settings.methodology.newStep")} ${index + 1}`}
+                onChange={(event) => {
+                  const steps = [...draft.steps];
+                  steps[index] = { ...step, title: event.target.value };
+                  setDraft({ ...draft, steps });
+                }}
+              />
+              {!readOnly ? (
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-xs"
+                    disabled={index === 0}
+                    onClick={() => {
+                      const steps = [...draft.steps];
+                      [steps[index - 1], steps[index]] = [steps[index], steps[index - 1]];
+                      setDraft({ ...draft, steps });
+                    }}
+                    aria-label={t("settings.methodology.moveUp")}
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-xs"
+                    disabled={index === draft.steps.length - 1}
+                    onClick={() => {
+                      const steps = [...draft.steps];
+                      [steps[index + 1], steps[index]] = [steps[index], steps[index + 1]];
+                      setDraft({ ...draft, steps });
+                    }}
+                    aria-label={t("settings.methodology.moveDown")}
+                  >
+                    ↓
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-xs"
+                    disabled={draft.steps.length <= 1}
+                    onClick={() => setDraft({ ...draft, steps: draft.steps.filter((_, i) => i !== index) })}
+                    aria-label={t("settings.methodology.removeStep")}
+                  >
+                    ×
+                  </button>
+                </div>
+              ) : null}
+            </div>
+            <textarea
+              className="textarea mt-2 text-xs"
+              rows={3}
+              disabled={readOnly}
+              placeholder={t("settings.methodology.stepPlaceholder")}
+              aria-label={`${t("settings.methodology.stepPlaceholder")} ${index + 1}`}
+              value={step.instructions}
+              onChange={(event) => {
+                const steps = [...draft.steps];
+                steps[index] = { ...step, instructions: event.target.value };
+                setDraft({ ...draft, steps });
+              }}
+            />
+          </div>
+        ))}
+      </div>
+
+      {!readOnly ? (
+        <button
+          type="button"
+          className="btn btn-xs mt-3"
+          onClick={() => setDraft({ ...draft, steps: [...draft.steps, newStep()] })}
+        >
+          {t("settings.methodology.addStep")}
+        </button>
+      ) : null}
+    </div>
+  );
 }
 
 export function SettingsApp() {
   const [state, setState] = useState<AppState | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [tab, setTab] = useState<Tab>("providers");
+  const [tab, setTab] = useState<Tab>(() =>
+    typeof window !== "undefined" && window.location.hash === "#methodologies" ? "methodologies" : "providers",
+  );
   const [toast, setToast] = useState<{ kind: "error" | "info"; message: string } | null>(null);
-  const [keyDrafts, setKeyDrafts] = useState<Record<string, string>>({});
-  const [urlDrafts, setUrlDrafts] = useState<Record<string, string>>({});
-  const [busyProvider, setBusyProvider] = useState<string | null>(null);
   const [editorId, setEditorId] = useState<string | null>(null);
   const [draft, setDraft] = useState<{ name: string; description: string; steps: LearningStep[] } | null>(null);
   const [skillUrl, setSkillUrl] = useState("");
   const [skillPreview, setSkillPreview] = useState<{ name: string; description: string; sourceFile: string; instructions: string } | null>(null);
   const [customProvider, setCustomProvider] = useState({ name: "", baseUrl: "", apiKey: "" });
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const notify = useCallback((kind: "error" | "info", message: string) => {
     setToast({ kind, message });
-    setTimeout(() => setToast(null), kind === "error" ? 7000 : 3000);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), kind === "error" ? 7000 : 3000);
   }, []);
 
   const refresh = useCallback(async () => {
     const next = await api.state();
     setState(next);
-    document.documentElement.setAttribute("data-theme", next.settings.theme);
+    applyTheme(next.settings.theme, { crossfade: false });
     return next;
   }, []);
 
+  // Initial hydration. State updates happen after awaits inside the async
+  // IIFE (no synchronous cascading renders), mirroring the studio shell.
   useEffect(() => {
-    void refresh().catch((error: unknown) => {
-      const message = error instanceof Error ? error.message : "Could not load settings.";
-      setLoadError(message);
-      notify("error", message);
-    });
-    if (window.location.hash === "#methodologies") setTab("methodologies");
-  }, [refresh, notify, reloadKey]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const next = await api.state();
+        if (cancelled) return;
+        setState(next);
+        applyTheme(next.settings.theme, { crossfade: false });
+      } catch (error) {
+        if (cancelled) return;
+        const message = error instanceof Error ? error.message : t("settings.toast.actionFailed");
+        setLoadError(message);
+        notify("error", message);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [notify, reloadKey]);
 
   async function guard(action: () => Promise<unknown>, message?: string) {
     try {
@@ -60,37 +297,56 @@ export function SettingsApp() {
       await refresh();
       if (message) notify("info", message);
     } catch (error) {
-      notify("error", error instanceof Error ? error.message : "Action failed.");
+      notify("error", error instanceof Error ? error.message : t("settings.toast.actionFailed"));
     }
+  }
+
+  function handleTabKeys(event: React.KeyboardEvent<HTMLDivElement>) {
+    const keys = ["ArrowRight", "ArrowLeft", "Home", "End"];
+    if (!keys.includes(event.key)) return;
+    event.preventDefault();
+    const current = TABS.findIndex((entry) => entry.key === tab);
+    let next = current;
+    if (event.key === "ArrowRight") next = (current + 1) % TABS.length;
+    if (event.key === "ArrowLeft") next = (current - 1 + TABS.length) % TABS.length;
+    if (event.key === "Home") next = 0;
+    if (event.key === "End") next = TABS.length - 1;
+    setTab(TABS[next].key);
+    tabRefs.current[next]?.focus();
   }
 
   if (!state) {
     if (loadError) {
       return (
-        <div className="flex h-screen items-center justify-center px-6">
-          <div className="card w-full max-w-md p-6 text-center" style={{ borderColor: "var(--warn)" }}>
-            <div className="mb-2 text-lg" style={{ color: "var(--warn)" }}>
-              Settings could not load
-            </div>
+        <main id="main-content" className="flex h-screen items-center justify-center px-6" tabIndex={-1}>
+          <a href="#main-content" className="skip-link">
+            {t("app.skipToContent")}
+          </a>
+          <div className="card card-warn w-full max-w-md p-6 text-center">
+            <div className="text-warn mb-2 text-lg">{t("settings.error.title")}</div>
             <p className="mb-4 text-sm leading-relaxed text-muted">{loadError}</p>
-            <p className="mb-4 text-xs leading-relaxed text-muted">
-              Check the terminal running the server for details, then try again.
-            </p>
+            <p className="mb-4 text-xs leading-relaxed text-muted">{t("settings.error.hint")}</p>
             <button
+              type="button"
               className="btn btn-primary"
               onClick={() => {
                 setLoadError(null);
                 setReloadKey((value) => value + 1);
               }}
             >
-              Try again
+              {t("settings.error.retry")}
             </button>
           </div>
-        </div>
+        </main>
       );
     }
     return (
-      <div className="flex h-screen items-center justify-center text-sm text-muted">Loading settings…</div>
+      <main id="main-content" tabIndex={-1}>
+        <a href="#main-content" className="skip-link">
+          {t("app.skipToContent")}
+        </a>
+        <SettingsSkeleton />
+      </main>
     );
   }
 
@@ -98,352 +354,105 @@ export function SettingsApp() {
 
   /* ---------------------------------------------------------------- */
 
-  function ProviderCard({ provider }: { provider: ProviderRow }) {
-    const models = state!.models.filter((model) => model.providerId === provider.id);
-    const isActive = settings.activeProviderId === provider.id;
-    const busy = busyProvider === provider.id;
-    return (
-      <div className="card p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <span
-            className="inline-block h-2 w-2 rounded-full"
-            style={{
-              background:
-                provider.status === "connected" ? "var(--good)" : provider.status === "error" ? "var(--warn)" : "var(--muted)",
-            }}
-          />
-          <h3 className="font-medium">{provider.name}</h3>
-          <span className="chip">{provider.protocol === "anthropic" ? "Anthropic API" : "OpenAI-compatible"}</span>
-          {isActive ? <span className="chip chip-on">active</span> : null}
-          {models.length ? <span className="chip">{models.length} models</span> : null}
-          <div className="ml-auto flex gap-1.5">
-            <button
-              className="btn btn-xs"
-              disabled={busy}
-              onClick={async () => {
-                setBusyProvider(provider.id);
-                await guard(async () => {
-                  const result = await api.discoverModels(provider.id);
-                  notify("info", `${result.models.length} models discovered from ${provider.name}.`);
-                });
-                setBusyProvider(null);
-              }}
-            >
-              {busy ? "Checking…" : "Test & discover"}
-            </button>
-            <button
-              className="btn btn-xs"
-              disabled={!models.length}
-              onClick={() =>
-                guard(
-                  () =>
-                    api.patchSettings({
-                      activeProviderId: provider.id,
-                      activeModelId: models[0]?.modelId ?? null,
-                    }),
-                  `${provider.name} is now the active provider.`,
-                )
-              }
-            >
-              Use this provider
-            </button>
-          </div>
-        </div>
-
-        <p className="mt-1.5 text-xs leading-relaxed text-muted">{provider.blurb}</p>
-        {provider.statusMessage ? (
-          <p className="mt-1 text-xs" style={{ color: provider.status === "error" ? "var(--warn)" : "var(--muted)" }}>
-            {provider.statusMessage}
-          </p>
-        ) : null}
-
-        {provider.kind === "demo" ? (
-          <p className="mt-2 text-xs leading-relaxed text-muted">
-            No key required. This engine renders deterministic study scaffolds offline so you can explore the workflow —
-            it is not a language model.
-          </p>
-        ) : (
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            <label className="block">
-              <span className="label">Base URL</span>
-              <input
-                className="input mt-1 text-xs"
-                value={urlDrafts[provider.id] ?? provider.baseUrl}
-                onChange={(event) => setUrlDrafts({ ...urlDrafts, [provider.id]: event.target.value })}
-                onBlur={(event) => {
-                  const value = event.target.value.trim();
-                  if (value && value !== provider.baseUrl) {
-                    void guard(() => api.patchProvider({ id: provider.id, baseUrl: value }), "Base URL saved.");
-                  }
-                }}
-              />
-            </label>
-            <label className="block">
-              <span className="label">
-                API key {provider.keySource === "env" ? `· using ${provider.apiKeyEnv}` : provider.keyHint ? `· ${provider.keyHint}` : ""}
-              </span>
-              <div className="mt-1 flex gap-1.5">
-                <input
-                  className="input text-xs"
-                  type="password"
-                  autoComplete="off"
-                  placeholder={provider.hasKey ? "Key stored — enter a new one to replace" : `Paste your key, or set ${provider.apiKeyEnv} in .env`}
-                  value={keyDrafts[provider.id] ?? ""}
-                  onChange={(event) => setKeyDrafts({ ...keyDrafts, [provider.id]: event.target.value })}
-                />
-                <button
-                  className="btn btn-xs"
-                  disabled={!keyDrafts[provider.id]?.trim()}
-                  onClick={() =>
-                    guard(async () => {
-                      await api.patchProvider({ id: provider.id, apiKey: keyDrafts[provider.id].trim() });
-                      setKeyDrafts({ ...keyDrafts, [provider.id]: "" });
-                    }, "Key saved locally.")
-                  }
-                >
-                  Save
-                </button>
-                {provider.keySource === "stored" ? (
-                  <button
-                    className="btn btn-xs"
-                    onClick={() => guard(() => api.patchProvider({ id: provider.id, apiKey: null }), "Key cleared.")}
-                  >
-                    Clear
-                  </button>
-                ) : null}
-                {!provider.builtIn ? (
-                  <button
-                    className="btn btn-xs"
-                    onClick={() => {
-                      if (window.confirm(`Remove ${provider.name}?`)) void guard(() => api.deleteProvider(provider.id));
-                    }}
-                  >
-                    Remove
-                  </button>
-                ) : null}
-              </div>
-            </label>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  /* ---------------------------------------------------------------- */
-
-  function MethodologyEditor({ config }: { config: ConfigRow | null }) {
-    if (!draft) return null;
-    const readOnly = Boolean(config?.builtIn);
-    return (
-      <div className="card p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            className="input max-w-xs"
-            value={draft.name}
-            disabled={readOnly}
-            onChange={(event) => setDraft({ ...draft, name: event.target.value })}
-          />
-          <span className="chip">{draft.steps.length} steps</span>
-          {readOnly ? <span className="chip">built-in · read only</span> : null}
-          <div className="ml-auto flex gap-1.5">
-            {readOnly ? (
-              <button
-                className="btn btn-xs btn-primary"
-                onClick={() =>
-                  guard(async () => {
-                    const created = await api.createConfig({
-                      name: `${draft.name} (copy)`,
-                      description: draft.description,
-                      steps: draft.steps.map((step) => ({ ...step, id: crypto.randomUUID() })),
-                    });
-                    setEditorId(created.config.id);
-                    setDraft({
-                      name: created.config.name,
-                      description: created.config.description,
-                      steps: created.config.steps,
-                    });
-                  }, "Duplicated — the copy is fully editable.")
-                }
-              >
-                Duplicate to edit
-              </button>
-            ) : (
-              <>
-                <button
-                  className="btn btn-xs btn-primary"
-                  onClick={() =>
-                    guard(
-                      () =>
-                        api.patchConfig({
-                          id: config!.id,
-                          name: draft.name,
-                          description: draft.description,
-                          steps: draft.steps,
-                        }),
-                      "Methodology saved.",
-                    )
-                  }
-                >
-                  Save
-                </button>
-                <button
-                  className="btn btn-xs"
-                  onClick={() => {
-                    if (window.confirm(`Delete "${draft.name}"?`)) {
-                      void guard(async () => {
-                        await api.deleteConfig(config!.id);
-                        setEditorId(null);
-                        setDraft(null);
-                      }, "Methodology deleted.");
-                    }
-                  }}
-                >
-                  Delete
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-
-        <input
-          className="input mt-2 text-xs"
-          placeholder="Short description"
-          disabled={readOnly}
-          value={draft.description}
-          onChange={(event) => setDraft({ ...draft, description: event.target.value })}
-        />
-
-        <div className="mt-4 space-y-3">
-          {draft.steps.map((step, index) => (
-            <div key={step.id} className="rounded-xl border border-line bg-surface2/40 p-3">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-accent text-[0.7rem] text-white">
-                  {index + 1}
-                </span>
-                <input
-                  className="input text-sm"
-                  value={step.title}
-                  disabled={readOnly}
-                  onChange={(event) => {
-                    const steps = [...draft.steps];
-                    steps[index] = { ...step, title: event.target.value };
-                    setDraft({ ...draft, steps });
-                  }}
-                />
-                {!readOnly ? (
-                  <div className="flex gap-1">
-                    <button
-                      className="btn btn-ghost btn-xs"
-                      disabled={index === 0}
-                      onClick={() => {
-                        const steps = [...draft.steps];
-                        [steps[index - 1], steps[index]] = [steps[index], steps[index - 1]];
-                        setDraft({ ...draft, steps });
-                      }}
-                      aria-label="Move up"
-                    >
-                      ↑
-                    </button>
-                    <button
-                      className="btn btn-ghost btn-xs"
-                      disabled={index === draft.steps.length - 1}
-                      onClick={() => {
-                        const steps = [...draft.steps];
-                        [steps[index + 1], steps[index]] = [steps[index], steps[index + 1]];
-                        setDraft({ ...draft, steps });
-                      }}
-                      aria-label="Move down"
-                    >
-                      ↓
-                    </button>
-                    <button
-                      className="btn btn-ghost btn-xs"
-                      disabled={draft.steps.length <= 1}
-                      onClick={() => setDraft({ ...draft, steps: draft.steps.filter((_, i) => i !== index) })}
-                      aria-label="Remove step"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-              <textarea
-                className="textarea mt-2 text-xs"
-                rows={3}
-                disabled={readOnly}
-                placeholder="What should the engine do at this step?"
-                value={step.instructions}
-                onChange={(event) => {
-                  const steps = [...draft.steps];
-                  steps[index] = { ...step, instructions: event.target.value };
-                  setDraft({ ...draft, steps });
-                }}
-              />
-            </div>
-          ))}
-        </div>
-
-        {!readOnly ? (
-          <button className="btn btn-xs mt-3" onClick={() => setDraft({ ...draft, steps: [...draft.steps, newStep()] })}>
-            ＋ Add step
-          </button>
-        ) : null}
-      </div>
-    );
-  }
-
   /* ---------------------------------------------------------------- */
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-8">
+    <main id="main-content" className="mx-auto max-w-5xl px-6 py-8" tabIndex={-1}>
+      <a href="#main-content" className="skip-link">
+        {t("app.skipToContent")}
+      </a>
       <div className="flex flex-wrap items-center gap-3">
         <Link href="/studio" className="btn btn-xs">
-          ← Studio
+          {t("settings.back")}
         </Link>
-        <h1 className="font-serif text-2xl">Settings</h1>
-        <span className="chip">local-first · nothing leaves this machine except model requests</span>
+        <h1 className="font-serif text-2xl">{t("settings.title")}</h1>
+        <span className="chip">{t("settings.tagline")}</span>
       </div>
 
-      <nav className="mt-5 flex flex-wrap gap-1 border-b border-line">
-        {TABS.map((entry) => (
-          <button
-            key={entry.key}
-            onClick={() => setTab(entry.key)}
-            className="rounded-t-lg px-3 py-2 text-sm transition"
-            style={{
-              background: tab === entry.key ? "var(--surface)" : "transparent",
-              color: tab === entry.key ? "var(--accent)" : "var(--muted)",
-              borderBottom: tab === entry.key ? "2px solid var(--accent)" : "2px solid transparent",
-            }}
-          >
-            {entry.label}
-          </button>
-        ))}
+      <nav
+        className="mt-5 flex flex-wrap gap-1 border-b border-line"
+        role="tablist"
+        aria-label={t("settings.title")}
+        onKeyDown={handleTabKeys}
+      >
+        {TABS.map((entry, index) => {
+          const selected = tab === entry.key;
+          return (
+            <button
+              key={entry.key}
+              ref={(element) => {
+                tabRefs.current[index] = element;
+              }}
+              id={`settings-tab-${entry.key}`}
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              aria-controls={`settings-panel-${entry.key}`}
+              tabIndex={selected ? 0 : -1}
+              className="settings-tab"
+              onClick={() => setTab(entry.key)}
+            >
+              {t(entry.labelKey)}
+            </button>
+          );
+        })}
       </nav>
 
       <div className="py-6">
         {tab === "providers" ? (
-          <div className="space-y-3">
+          <div
+            id="settings-panel-providers"
+            role="tabpanel"
+            aria-labelledby="settings-tab-providers"
+            tabIndex={0}
+            className="space-y-3"
+          >
+              <h2 className="sr-only">{t("settings.tab.providers")}</h2>
             {state.providers.map((provider) => (
-              <div key={provider.id}>{ProviderCard({ provider })}</div>
+              <ProviderCard
+                key={provider.id}
+                provider={provider}
+                modelsCount={state.models.filter((model) => model.providerId === provider.id).length}
+                firstModelId={
+                  state.models.find((model) => model.providerId === provider.id)?.modelId ?? null
+                }
+                isActive={settings.activeProviderId === provider.id}
+                guard={guard}
+                notify={notify}
+              />
             ))}
 
             <div className="card p-4">
-              <h3 className="font-medium">Add a custom OpenAI-compatible provider</h3>
-              <p className="mt-1 text-xs text-muted">
-                Any endpoint that speaks the OpenAI chat-completions specification — a local runtime, a gateway, a
-                private deployment.
-              </p>
-              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+              <h3 className="font-medium">{t("settings.provider.custom.title")}</h3>
+              <p className="mt-1 text-xs text-muted">{t("settings.provider.custom.body")}</p>
+              <form
+                className="mt-3 grid gap-2 sm:grid-cols-3"
+                onSubmit={async (event) => {
+                  event.preventDefault();
+                  if (!customProvider.name.trim() || !customProvider.baseUrl.trim()) return;
+                  await guard(async () => {
+                    await api.createProvider({
+                      name: customProvider.name.trim(),
+                      kind: "custom",
+                      baseUrl: customProvider.baseUrl.trim(),
+                      apiKey: customProvider.apiKey.trim() || undefined,
+                    });
+                    setCustomProvider({ name: "", baseUrl: "", apiKey: "" });
+                  }, t("settings.provider.custom.added"));
+                }}
+              >
                 <input
                   className="input text-xs"
-                  placeholder="Name"
+                  placeholder={t("settings.provider.custom.name")}
+                  aria-label={t("settings.provider.custom.name")}
                   value={customProvider.name}
                   onChange={(event) => setCustomProvider({ ...customProvider, name: event.target.value })}
                 />
                 <input
                   className="input text-xs"
-                  placeholder="https://host/v1"
+                  type="url"
+                  placeholder={t("settings.provider.custom.baseUrl")}
+                  aria-label={t("settings.provider.custom.baseUrl")}
                   value={customProvider.baseUrl}
                   onChange={(event) => setCustomProvider({ ...customProvider, baseUrl: event.target.value })}
                 />
@@ -451,39 +460,38 @@ export function SettingsApp() {
                   <input
                     className="input text-xs"
                     type="password"
-                    placeholder="API key (optional)"
+                    placeholder={t("settings.provider.custom.apiKey")}
+                    aria-label={t("settings.provider.custom.apiKey")}
                     value={customProvider.apiKey}
                     onChange={(event) => setCustomProvider({ ...customProvider, apiKey: event.target.value })}
                   />
                   <button
                     className="btn btn-xs"
+                    type="submit"
                     disabled={!customProvider.name.trim() || !customProvider.baseUrl.trim()}
-                    onClick={() =>
-                      guard(async () => {
-                        await api.createProvider({
-                          name: customProvider.name.trim(),
-                          kind: "custom",
-                          baseUrl: customProvider.baseUrl.trim(),
-                          apiKey: customProvider.apiKey.trim() || undefined,
-                        });
-                        setCustomProvider({ name: "", baseUrl: "", apiKey: "" });
-                      }, "Custom provider added.")
-                    }
                   >
-                    Add
+                    {t("settings.provider.custom.add")}
                   </button>
                 </div>
-              </div>
+              </form>
             </div>
           </div>
         ) : null}
 
         {tab === "methodologies" ? (
-          <div className="grid gap-4 md:grid-cols-[16rem_1fr]">
+          <div
+            id="settings-panel-methodologies"
+            role="tabpanel"
+            aria-labelledby="settings-tab-methodologies"
+            tabIndex={0}
+            className="grid gap-4 md:grid-cols-[16rem_1fr]"
+          >
+              <h2 className="sr-only">{t("settings.tab.methodologies")}</h2>
             <div className="space-y-1">
               {state.configs.map((config) => (
                 <button
                   key={config.id}
+                  type="button"
                   className="sidebar-item"
                   data-active={editorId === config.id}
                   onClick={() => {
@@ -493,12 +501,17 @@ export function SettingsApp() {
                 >
                   <div className="flex items-center gap-1.5">
                     <span className="truncate">{config.name}</span>
-                    {settings.activeConfigId === config.id ? <span className="chip chip-on">default</span> : null}
+                    {settings.activeConfigId === config.id ? (
+                      <span className="chip chip-on">default</span>
+                    ) : null}
                   </div>
-                  <span className="text-[0.68rem] text-muted">{config.steps.length} steps</span>
+                  <span className="text-micro text-muted">
+                    {t("settings.methodology.steps", { count: config.steps.length })}
+                  </span>
                 </button>
               ))}
               <button
+                type="button"
                 className="btn btn-xs mt-2 w-full"
                 onClick={() =>
                   guard(async () => {
@@ -520,40 +533,52 @@ export function SettingsApp() {
                   })
                 }
               >
-                ＋ New methodology
+                {t("settings.methodology.create")}
               </button>
               {editorId ? (
                 <button
+                  type="button"
                   className="btn btn-xs w-full"
-                  onClick={() => guard(() => api.patchSettings({ activeConfigId: editorId }), "Set as default methodology.")}
+                  onClick={() => guard(() => api.patchSettings({ activeConfigId: editorId }), t("settings.methodology.setDefaultDone"))}
                 >
-                  Set as default
+                  {t("settings.methodology.setDefault")}
                 </button>
               ) : null}
             </div>
             {draft ? (
-              MethodologyEditor({ config: state.configs.find((config) => config.id === editorId) ?? null })
+              <MethodologyEditor
+                config={state.configs.find((config) => config.id === editorId) ?? null}
+                draft={draft}
+                setDraft={setDraft}
+                setEditorId={setEditorId}
+                guard={guard}
+              />
             ) : (
               <div className="card flex items-center justify-center p-10 text-sm text-muted">
-                Choose a methodology to inspect or edit. Built-in presets are read-only; duplicate one to make it yours.
+                {t("settings.methodology.empty")}
               </div>
             )}
           </div>
         ) : null}
 
         {tab === "learner" ? (
-          <div className="grid gap-4 md:grid-cols-2">
+          <div
+            id="settings-panel-learner"
+            role="tabpanel"
+            aria-labelledby="settings-tab-learner"
+            tabIndex={0}
+            className="grid gap-4 md:grid-cols-2"
+          >
+              <h2 className="sr-only">{t("settings.tab.learner")}</h2>
             <div className="card p-4">
-              <h3 className="font-medium">Learner profile</h3>
-              <p className="mt-1 text-xs text-muted">
-                Optional. Leave it blank and the engine will calibrate from your questions instead.
-              </p>
+              <h3 className="font-medium">{t("settings.learner.title")}</h3>
+              <p className="mt-1 text-xs text-muted">{t("settings.learner.body")}</p>
               {(
                 [
-                  ["level", "Level", "e.g. second-year medical student"],
-                  ["background", "Background", "What you already know well"],
-                  ["goals", "Goals", "What you are working towards"],
-                  ["preferences", "Preferences", "How you like to be taught"],
+                  ["level", t("settings.learner.level"), t("settings.learner.levelPlaceholder")],
+                  ["background", t("settings.learner.background"), t("settings.learner.backgroundPlaceholder")],
+                  ["goals", t("settings.learner.goals"), t("settings.learner.goalsPlaceholder")],
+                  ["preferences", t("settings.learner.preferences"), t("settings.learner.preferencesPlaceholder")],
                 ] as const
               ).map(([key, label, placeholder]) => (
                 <label key={key} className="mt-3 block">
@@ -576,9 +601,9 @@ export function SettingsApp() {
             </div>
 
             <div className="card space-y-4 p-4">
-              <h3 className="font-medium">Generation</h3>
+              <h3 className="font-medium">{t("settings.generation.title")}</h3>
               <label className="block">
-                <span className="label">Context level</span>
+                <span className="label">{t("settings.generation.context")}</span>
                 <select
                   className="select mt-1 text-xs"
                   value={settings.contextLevel}
@@ -590,13 +615,13 @@ export function SettingsApp() {
                     </option>
                   ))}
                 </select>
-                <span className="mt-1 block text-[0.68rem] text-muted">
-                  Defaults to the minimum useful context and is always clamped to the active model&apos;s window.
+                <span className="mt-1 block text-micro text-muted">
+                  {t("settings.generation.contextHint")}
                 </span>
               </label>
 
               <label className="block">
-                <span className="label">Max output tokens</span>
+                <span className="label">{t("settings.generation.maxTokens")}</span>
                 <input
                   className="input mt-1 text-xs"
                   type="number"
@@ -608,7 +633,7 @@ export function SettingsApp() {
               </label>
 
               <label className="block">
-                <span className="label">Temperature · {settings.temperature.toFixed(2)}</span>
+                <span className="label">{t("settings.generation.temperature", { value: settings.temperature.toFixed(2) })}</span>
                 <input
                   className="mt-2 w-full"
                   type="range"
@@ -627,10 +652,10 @@ export function SettingsApp() {
 
               {(
                 [
-                  ["streaming", "Stream responses", "Render stages token by token when the model supports it."],
-                  ["dynamicAgent", "Dynamic agent by default", "New sessions start with autonomous agent mode on."],
-                  ["webRetrieval", "Allow web retrieval", "Lets the agent search and read pages when it decides it needs to."],
-                  ["reasoningEnabled", "Request reasoning", "Only takes effect on models that expose a reasoning trace."],
+                  ["streaming", t("settings.generation.streaming"), t("settings.generation.streamingHint")],
+                  ["dynamicAgent", t("settings.generation.agent"), t("settings.generation.agentHint")],
+                  ["webRetrieval", t("settings.generation.retrieval"), t("settings.generation.retrievalHint")],
+                  ["reasoningEnabled", t("settings.generation.reasoning"), t("settings.generation.reasoningHint")],
                 ] as const
               ).map(([key, label, hint]) => (
                 <label key={key} className="flex items-start gap-2 text-xs">
@@ -651,22 +676,27 @@ export function SettingsApp() {
         ) : null}
 
         {tab === "skills" ? (
-          <div className="space-y-3">
+          <div
+            id="settings-panel-skills"
+            role="tabpanel"
+            aria-labelledby="settings-tab-skills"
+            tabIndex={0}
+            className="space-y-3"
+          >
+              <h2 className="sr-only">{t("settings.tab.skills")}</h2>
             <div className="card p-4">
-              <h3 className="font-medium">Import a skill from GitHub</h3>
-              <p className="mt-1 text-xs leading-relaxed text-muted">
-                The repository is treated as untrusted input. Only a single Markdown definition (SKILL.md, AGENT.md or
-                README.md) is read, sanitised and stored as reference guidance — nothing is ever executed, and imported
-                text can never override the engine&apos;s own instructions.
-              </p>
+              <h3 className="font-medium">{t("settings.skills.importTitle")}</h3>
+              <p className="mt-1 text-xs leading-relaxed text-muted">{t("settings.skills.importBody")}</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <input
                   className="input text-xs sm:max-w-md"
-                  placeholder="https://github.com/owner/repo"
+                  placeholder={t("settings.skills.urlPlaceholder")}
+                  aria-label={t("settings.skills.urlPlaceholder")}
                   value={skillUrl}
                   onChange={(event) => setSkillUrl(event.target.value)}
                 />
                 <button
+                  type="button"
                   className="btn btn-xs"
                   disabled={!skillUrl.trim()}
                   onClick={async () => {
@@ -674,13 +704,14 @@ export function SettingsApp() {
                       const result = await api.previewSkill(skillUrl.trim());
                       setSkillPreview(result.preview);
                     } catch (error) {
-                      notify("error", error instanceof Error ? error.message : "Preview failed.");
+                      notify("error", error instanceof Error ? error.message : t("settings.toast.actionFailed"));
                     }
                   }}
                 >
-                  Preview
+                  {t("settings.skills.preview")}
                 </button>
                 <button
+                  type="button"
                   className="btn btn-xs btn-primary"
                   disabled={!skillPreview}
                   onClick={() =>
@@ -688,19 +719,19 @@ export function SettingsApp() {
                       await api.importSkill(skillUrl.trim());
                       setSkillPreview(null);
                       setSkillUrl("");
-                    }, "Skill imported (disabled by default).")
+                    }, t("settings.skills.imported"))
                   }
                 >
-                  Import
+                  {t("settings.skills.import")}
                 </button>
               </div>
               {skillPreview ? (
-                <div className="mt-3 rounded-xl border border-line bg-surface2/50 p-3">
+                <div className="mt-3 rounded-xl border border-line bg-surface-muted p-3">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-sm">{skillPreview.name}</span>
                     <span className="chip">{skillPreview.sourceFile.split("/").pop()}</span>
                   </div>
-                  <pre className="mt-2 max-h-52 overflow-auto whitespace-pre-wrap text-[0.7rem] leading-relaxed text-muted">
+                  <pre className="mt-2 max-h-52 overflow-auto whitespace-pre-wrap text-micro leading-relaxed text-muted">
                     {skillPreview.instructions.slice(0, 2000)}
                   </pre>
                 </div>
@@ -711,46 +742,49 @@ export function SettingsApp() {
               <div key={skill.id} className="card p-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <h4 className="font-medium">{skill.name}</h4>
-                  <span className={`chip ${skill.enabled ? "chip-on" : ""}`}>{skill.enabled ? "active" : "inactive"}</span>
+                  <span className={`chip ${skill.enabled ? "chip-on" : ""}`}>
+                    {skill.enabled ? t("settings.skills.active") : t("settings.skills.inactive")}
+                  </span>
                   <a className="chip hover:border-accent" href={skill.repoUrl} target="_blank" rel="noreferrer">
-                    source
+                    {t("settings.skills.source")}
                   </a>
                   <div className="ml-auto flex gap-1.5">
                     <button
+                      type="button"
                       className="btn btn-xs"
                       onClick={() => guard(() => api.patchSkill({ id: skill.id, enabled: !skill.enabled }))}
                     >
-                      {skill.enabled ? "Disable" : "Enable"}
+                      {skill.enabled ? t("settings.skills.disable") : t("settings.skills.enable")}
                     </button>
-                    <button className="btn btn-xs" onClick={() => guard(() => api.deleteSkill(skill.id))}>
-                      Remove
+                    <button type="button" className="btn btn-xs" onClick={() => guard(() => api.deleteSkill(skill.id))}>
+                      {t("settings.skills.remove")}
                     </button>
                   </div>
                 </div>
                 <p className="mt-1 text-xs text-muted">{skill.description}</p>
               </div>
             ))}
-            {!state.skills.length ? (
-              <p className="px-1 text-xs text-muted">No skills imported yet.</p>
-            ) : null}
+            {!state.skills.length ? <p className="px-1 text-xs text-muted">{t("settings.skills.empty")}</p> : null}
           </div>
         ) : null}
 
         {tab === "data" ? (
-          <div className="card p-5">
-            <h3 className="font-medium">Local data</h3>
-            <p className="mt-1 text-xs leading-relaxed text-muted">
-              Everything you create is stored in the studio&apos;s local database on this machine. Refresh the page,
-              restart the browser or come back in a week — your projects, sessions, learning state, methodologies and
-              provider configuration will still be here. API keys stay server-side and are never returned to the
-              browser.
-            </p>
+          <div
+            id="settings-panel-data"
+            role="tabpanel"
+            aria-labelledby="settings-tab-data"
+            tabIndex={0}
+            className="card p-5"
+          >
+              <h2 className="sr-only">{t("settings.tab.data")}</h2>
+            <h3 className="font-medium">{t("settings.data.title")}</h3>
+            <p className="mt-1 text-xs leading-relaxed text-muted">{t("settings.data.body")}</p>
             <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
               {[
-                ["Projects", state.projects.length],
-                ["Sessions", state.sessions.length],
-                ["Methodologies", state.configs.length],
-                ["Cached models", state.models.length],
+                [t("settings.data.projects"), state.projects.length],
+                [t("settings.data.sessions"), state.sessions.length],
+                [t("settings.data.methodologies"), state.configs.length],
+                [t("settings.data.models"), state.models.length],
               ].map(([label, value]) => (
                 <div key={String(label)}>
                   <dt className="label">{label}</dt>
@@ -764,13 +798,14 @@ export function SettingsApp() {
 
       {toast ? (
         <div
-          className="card animate-rise fixed bottom-5 left-1/2 z-50 max-w-lg -translate-x-1/2 px-4 py-2.5 text-sm"
-          style={{ borderColor: toast.kind === "error" ? "var(--warn)" : "var(--accent)" }}
+          className="toast animate-rise fixed bottom-5 left-1/2 z-50 max-w-lg -translate-x-1/2 px-4 py-2.5 text-sm"
+          data-tone={toast.kind}
           role="status"
+          aria-live="polite"
         >
           {toast.message}
         </div>
       ) : null}
-    </div>
+    </main>
   );
 }

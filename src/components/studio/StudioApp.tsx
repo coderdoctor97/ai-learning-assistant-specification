@@ -9,6 +9,9 @@ import {
   type ResourceRef,
   type SessionDetail,
 } from "@/lib/client/api";
+import { t } from "@/lib/i18n";
+import { applyTheme } from "@/lib/theme";
+import { useMediaQuery } from "@/lib/useMediaQuery";
 import { NewSession } from "./NewSession";
 import { Sidebar } from "./Sidebar";
 import { StageDeck, type RunState } from "./StageDeck";
@@ -26,6 +29,39 @@ const NO_CAPS: Capabilities = {
   documents: false,
 };
 
+/* Initial-load skeleton mirroring the studio shell geometry. */
+function StudioSkeleton() {
+  return (
+    <div className="studio-shell flex h-screen overflow-hidden" aria-busy="true">
+      <div className="w-14 shrink-0 border-r border-line bg-surface px-2 py-4" aria-hidden="true">
+        <div className="skeleton mx-auto h-8 w-8" />
+        <div className="skeleton mx-auto mt-3 h-8 w-8" />
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex items-center gap-2 border-b border-line bg-surface px-4 py-2.5" aria-hidden="true">
+          <div className="skeleton h-8 w-40" />
+          <div className="skeleton h-8 w-56" />
+          <div className="skeleton ml-auto h-8 w-24" />
+        </div>
+        <div className="px-6 py-3.5" aria-hidden="true">
+          <div className="skeleton h-6 w-64" />
+          <div className="skeleton mt-3 h-7 w-full max-w-2xl" />
+          <div className="skeleton mt-3 h-1.5 w-full" />
+        </div>
+        <div className="mx-auto w-full max-w-3xl px-6" role="status" aria-live="polite">
+          <span className="sr-only">{t("studio.loading")}</span>
+          <div className="card space-y-3 p-8" aria-hidden="true">
+            <div className="skeleton h-4 w-3/4" />
+            <div className="skeleton h-4 w-full" />
+            <div className="skeleton h-4 w-5/6" />
+            <div className="skeleton h-24 w-full" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function StudioApp() {
   const [state, setState] = useState<AppState | null>(null);
   const [detail, setDetail] = useState<SessionDetail | null>(null);
@@ -38,7 +74,9 @@ export function StudioApp() {
   const [collapsed, setCollapsed] = useState(false);
   const [creating, setCreating] = useState(false);
   const [showNew, setShowNew] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isMobile = useMediaQuery("(max-width: 767px)");
 
   const notify = useCallback((kind: "error" | "info", message: string) => {
     setToast({ kind, message });
@@ -62,10 +100,53 @@ export function StudioApp() {
         window.localStorage.setItem(LAST_SESSION_KEY, id);
       } catch (error) {
         window.localStorage.removeItem(LAST_SESSION_KEY);
-        notify("error", error instanceof Error ? error.message : "Could not open that session.");
+        notify("error", error instanceof Error ? error.message : t("studio.error.openFailed"));
       }
     },
     [notify],
+  );
+
+  /*
+   * Stream state updates are coalesced per animation frame: SSE deltas can
+   * arrive faster than frames, and every setRun otherwise costs a full
+   * markdown re-render. Events accumulate and flush once per frame.
+   */
+  type RunUpdate = (current: RunState | null) => RunState | null;
+  const pendingUpdates = useRef<RunUpdate[]>([]);
+  const rafHandle = useRef<number | null>(null);
+
+  const flushRunUpdates = useCallback(() => {
+    if (rafHandle.current !== null) {
+      cancelAnimationFrame(rafHandle.current);
+      rafHandle.current = null;
+    }
+    const updates = pendingUpdates.current;
+    pendingUpdates.current = [];
+    if (!updates.length) return;
+    setRun((current) => updates.reduce((acc, update) => update(acc), current));
+  }, []);
+
+  const scheduleRunUpdate = useCallback(
+    (update: RunUpdate) => {
+      pendingUpdates.current.push(update);
+      if (rafHandle.current !== null) return;
+      rafHandle.current = requestAnimationFrame(() => {
+        rafHandle.current = null;
+        const updates = pendingUpdates.current;
+        pendingUpdates.current = [];
+        if (!updates.length) return;
+        setRun((current) => updates.reduce((acc, u) => u(acc), current));
+      });
+    },
+    [],
+  );
+
+  useEffect(
+    () => () => {
+      if (rafHandle.current !== null) cancelAnimationFrame(rafHandle.current);
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+    },
+    [],
   );
 
   // Initial hydration ---------------------------------------------------
@@ -86,7 +167,7 @@ export function StudioApp() {
           setShowNew(true);
         }
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Could not reach the local database.";
+        const message = error instanceof Error ? error.message : t("studio.error.db");
         if (!cancelled) setLoadError(message);
         notify("error", message);
       } finally {
@@ -98,10 +179,10 @@ export function StudioApp() {
     };
   }, [notify, openSession, reloadKey]);
 
-  // Theme ---------------------------------------------------------------
+  // Theme (with 150ms token cross-fade) ----------------------------------
   useEffect(() => {
     if (!state) return;
-    document.documentElement.setAttribute("data-theme", state.settings.theme);
+    applyTheme(state.settings.theme);
     window.localStorage.setItem("studio-theme", state.settings.theme);
   }, [state]);
 
@@ -130,7 +211,7 @@ export function StudioApp() {
         setState({ ...state, settings: result.settings });
         for (const warning of result.warnings ?? []) notify("info", warning);
       } catch (error) {
-        notify("error", error instanceof Error ? error.message : "Could not save settings.");
+        notify("error", error instanceof Error ? error.message : t("studio.toast.settingsFailed"));
       }
     },
     [state, notify],
@@ -144,7 +225,7 @@ export function StudioApp() {
         setDetail({ ...detail, session: result.session });
         await refreshState();
       } catch (error) {
-        notify("error", error instanceof Error ? error.message : "Could not update the session.");
+        notify("error", error instanceof Error ? error.message : t("studio.toast.sessionFailed"));
       }
     },
     [detail, notify, refreshState],
@@ -155,9 +236,9 @@ export function StudioApp() {
       try {
         const result = await api.discoverModels(providerId);
         await refreshState();
-        notify("info", `${result.models.length} models discovered.`);
+        notify("info", t("topbar.model.discovered", { count: result.models.length }));
       } catch (error) {
-        notify("error", error instanceof Error ? error.message : "Model discovery failed.");
+        notify("error", error instanceof Error ? error.message : t("studio.toast.discoveryFailed"));
       }
     },
     [notify, refreshState],
@@ -169,11 +250,11 @@ export function StudioApp() {
       const sessionId = sessionOverride ?? detail?.session.id;
       if (!sessionId || run) return;
       setStageIndex(index);
-      setRun({ mode: "stage", stageIndex: index, status: "Starting…", text: "", reasoning: "", resources: [] });
+      setRun({ mode: "stage", stageIndex: index, status: t("studio.status.starting"), text: "", reasoning: "", resources: [] });
       let failed = false;
       const resources: ResourceRef[] = [];
       await streamRun(`/api/sessions/${sessionId}/generate`, { stageIndex: index, modifier }, (event) => {
-        setRun((current) => {
+        scheduleRunUpdate((current) => {
           if (!current) return current;
           switch (event.type) {
             case "status":
@@ -195,8 +276,9 @@ export function StudioApp() {
         }
       }).catch((error: unknown) => {
         failed = true;
-        notify("error", error instanceof Error ? error.message : "Generation failed.");
+        notify("error", error instanceof Error ? error.message : t("studio.toast.generateFailed"));
       });
+      flushRunUpdates();
       setRun(null);
       if (!failed) {
         await openSession(sessionId);
@@ -204,7 +286,7 @@ export function StudioApp() {
         await refreshState();
       }
     },
-    [detail, run, notify, openSession, refreshState],
+    [detail, run, notify, openSession, refreshState, scheduleRunUpdate, flushRunUpdates],
   );
 
   const ask = useCallback(
@@ -212,10 +294,10 @@ export function StudioApp() {
       if (!detail || run) return;
       const sessionId = detail.session.id;
       const index = detail.stages.find((stage) => stage.id === stageId)?.index ?? stageIndex;
-      setRun({ mode: "qa", stageIndex: index, status: "Thinking…", text: "", reasoning: "", resources: [] });
+      setRun({ mode: "qa", stageIndex: index, status: t("studio.status.thinking"), text: "", reasoning: "", resources: [] });
       let failed = false;
       await streamRun(`/api/sessions/${sessionId}/qa`, { stageId, question }, (event) => {
-        setRun((current) => {
+        scheduleRunUpdate((current) => {
           if (!current) return current;
           if (event.type === "status") return { ...current, status: event.message };
           if (event.type === "delta") return { ...current, text: current.text + event.text };
@@ -229,14 +311,15 @@ export function StudioApp() {
         }
       }).catch((error: unknown) => {
         failed = true;
-        notify("error", error instanceof Error ? error.message : "The question could not be answered.");
+        notify("error", error instanceof Error ? error.message : t("studio.toast.qaFailed"));
       });
+      flushRunUpdates();
       setRun(null);
       await openSession(sessionId);
       setStageIndex(index);
       if (!failed) await refreshState();
     },
-    [detail, run, stageIndex, notify, openSession, refreshState],
+    [detail, run, stageIndex, notify, openSession, refreshState, scheduleRunUpdate, flushRunUpdates],
   );
 
   const editStep = useCallback(
@@ -249,7 +332,7 @@ export function StudioApp() {
         const result = await api.patchSession(detail.session.id, { steps } as Record<string, unknown>);
         setDetail({ ...detail, session: result.session });
       } catch (error) {
-        notify("error", error instanceof Error ? error.message : "Could not update this step.");
+        notify("error", error instanceof Error ? error.message : t("studio.toast.stepFailed"));
       }
     },
     [detail, notify],
@@ -260,10 +343,10 @@ export function StudioApp() {
       if (!detail) return;
       try {
         const result = await api.uploadAttachment(detail.session.id, file);
-        notify("info", result.note ?? `${result.attachment.name} attached.`);
+        notify("info", result.note ?? t("studio.toast.attached", { name: result.attachment.name }));
         await openSession(detail.session.id);
       } catch (error) {
-        notify("error", error instanceof Error ? error.message : "Upload rejected.");
+        notify("error", error instanceof Error ? error.message : t("studio.toast.uploadRejected"));
       }
     },
     [detail, notify, openSession],
@@ -276,7 +359,7 @@ export function StudioApp() {
         await api.deleteAttachment(detail.session.id, attachmentId);
         await openSession(detail.session.id);
       } catch (error) {
-        notify("error", error instanceof Error ? error.message : "Could not remove that file.");
+        notify("error", error instanceof Error ? error.message : t("studio.toast.attachmentFailed"));
       }
     },
     [detail, notify, openSession],
@@ -294,7 +377,7 @@ export function StudioApp() {
         // every later stage stays on demand.
         await generate(0, "none", result.session.id);
       } catch (error) {
-        notify("error", error instanceof Error ? error.message : "Could not create the session.");
+        notify("error", error instanceof Error ? error.message : t("studio.toast.createFailed"));
       } finally {
         setCreating(false);
       }
@@ -305,17 +388,16 @@ export function StudioApp() {
   if (loading || !state) {
     if (!loading && loadError) {
       return (
-        <div className="flex h-screen items-center justify-center px-6">
-          <div className="card w-full max-w-md p-6 text-center" style={{ borderColor: "var(--warn)" }}>
-            <div className="mb-2 text-lg" style={{ color: "var(--warn)" }}>
-              Studio could not load
-            </div>
+        <main id="main-content" className="flex h-screen items-center justify-center px-6" tabIndex={-1}>
+          <a href="#main-content" className="skip-link">
+            {t("app.skipToContent")}
+          </a>
+          <div className="card card-warn w-full max-w-md p-6 text-center">
+            <div className="text-warn mb-2 text-lg">{t("studio.error.title")}</div>
             <p className="mb-4 text-sm leading-relaxed text-muted">{loadError}</p>
-            <p className="mb-4 text-xs leading-relaxed text-muted">
-              The studio could not read its local data file. Check the terminal running the server for details, then try
-              again.
-            </p>
+            <p className="mb-4 text-xs leading-relaxed text-muted">{t("studio.error.hint")}</p>
             <button
+              type="button"
               className="btn btn-primary"
               onClick={() => {
                 setLoadError(null);
@@ -323,28 +405,21 @@ export function StudioApp() {
                 setReloadKey((value) => value + 1);
               }}
             >
-              Try again
+              {t("studio.error.retry")}
             </button>
           </div>
-        </div>
+        </main>
       );
     }
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="flex items-center gap-3 text-sm text-muted">
-          <span className="dot-pulse flex gap-1">
-            <span className="inline-block h-2 w-2 rounded-full bg-accent" />
-            <span className="inline-block h-2 w-2 rounded-full bg-accent" />
-            <span className="inline-block h-2 w-2 rounded-full bg-accent" />
-          </span>
-          Loading your local studio…
-        </div>
-      </div>
-    );
+    return <StudioSkeleton />;
   }
 
   return (
-    <div className="studio-shell flex h-screen overflow-hidden">
+    <main id="main-content" className="studio-shell flex h-screen overflow-hidden" tabIndex={-1}>
+      <a href="#main-content" className="skip-link">
+        {t("app.skipToContent")}
+      </a>
+
       <Sidebar
         state={state}
         activeId={detail?.session.id ?? null}
@@ -371,6 +446,9 @@ export function StudioApp() {
           }
         }}
         notify={notify}
+        mobileOpen={mobileNavOpen}
+        onMobileClose={() => setMobileNavOpen(false)}
+        onMobileOpen={() => setMobileNavOpen(true)}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
@@ -408,23 +486,25 @@ export function StudioApp() {
       </div>
 
       {toast ? (
-        <div className="pointer-events-none fixed inset-x-0 bottom-5 z-50 flex justify-center px-5" role="status">
-          <div
-            className="card animate-rise pointer-events-auto w-full max-w-lg px-4 py-3 text-sm"
-            style={{ borderColor: toast.kind === "error" ? "var(--warn)" : "var(--accent)" }}
-          >
+        <div className="toast-layer pointer-events-none fixed inset-x-0 bottom-5 z-50 flex justify-center px-5" role="status" aria-live="polite">
+          <div className="toast card animate-rise pointer-events-auto w-full max-w-lg px-4 py-3 text-sm" data-tone={toast.kind}>
             <div className="flex items-start gap-3">
-              <span style={{ color: toast.kind === "error" ? "var(--warn)" : "var(--accent)" }}>
+              <span className="toast-icon" aria-hidden="true">
                 {toast.kind === "error" ? "⚠" : "✓"}
               </span>
               <span className="leading-relaxed">{toast.message}</span>
-              <button className="ml-2 text-muted hover:text-ink" onClick={() => setToast(null)} aria-label="Dismiss">
-                ×
+              <button
+                type="button"
+                className="icon-btn ml-2"
+                onClick={() => setToast(null)}
+                aria-label={t("studio.toast.dismiss")}
+              >
+                <span aria-hidden="true">×</span>
               </button>
             </div>
           </div>
         </div>
       ) : null}
-    </div>
+    </main>
   );
 }

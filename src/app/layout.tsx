@@ -2,17 +2,56 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
 
+/*
+ * Theme + reveal bootstrap: runs before first paint so the correct palette
+ * applies with no flash, and scroll reveals are armed only when the visitor
+ * has not asked for reduced motion.
+ */
+const themeBootstrap = `(function(){try{var t=localStorage.getItem('studio-theme')||'editorial';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','editorial');}try{if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches){document.documentElement.setAttribute('data-reveal-ready','true');}}catch(e){}})();`;
+
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
 export const metadata: Metadata = {
-  title: "Learning Studio — structured AI learning engine",
+  metadataBase: new URL(appUrl),
+  title: {
+    default: "Learning Studio — structured AI learning engine",
+    template: "%s · Learning Studio",
+  },
   description:
     "A local-first, model-independent AI learning studio that executes configurable teaching workflows stage by stage.",
+  applicationName: "Learning Studio",
+  keywords: ["learning", "AI tutor", "study engine", "local-first", "spaced learning", "methodologies"],
+  authors: [{ name: "Learning Studio" }],
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+  },
+  manifest: "/manifest.webmanifest",
+  openGraph: {
+    type: "website",
+    siteName: "Learning Studio",
+    title: "Learning Studio — structured AI learning engine",
+    description:
+      "Pick a teaching methodology, hand the engine a topic, and it runs the workflow one stage at a time — fully on your machine.",
+    url: "/",
+    locale: "en",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Learning Studio — structured AI learning engine",
+    description:
+      "A local-first, model-independent AI learning studio that executes configurable teaching workflows stage by stage.",
+  },
+  robots: { index: true, follow: true },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#a5613c",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#a5613c" },
+    { media: "(prefers-color-scheme: dark)", color: "#0c0d10" },
+  ],
+  width: "device-width",
+  initialScale: 1,
 };
-
-const themeBootstrap = `(function(){try{var t=localStorage.getItem('studio-theme')||'editorial';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','editorial');}})();`;
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
