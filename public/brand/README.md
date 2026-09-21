@@ -1,59 +1,51 @@
 # Brand assets
 
-Serves the header/sidebar lockup, the PWA icons and the social card. The `.svg`
-files are the sources; the `.png` files are derived from them, so edit an SVG and
-re-export rather than painting over a raster.
+Nothing here is invented by the stylesheet: the files below are the artwork, and
+CSS only decides how tall it displays.
 
-| File | Used by | Notes |
+## Required files
+
+| Path | Rendered by | Shown when |
 | --- | --- | --- |
-| `logo-light.svg/.png` | `.brand-logo` in the site nav, sidebar and footer | for `light` + `editorial` themes |
-| `logo-dark.svg/.png` | same, swapped by `[data-theme="dark"] .brand-logo-dark` | for the dark theme |
-| `icon.svg`, `icon-192.png`, `icon-512.png` | `/manifest.webmanifest` | `purpose: "maskable"` too, so the tile is full-bleed and the mark stays inside the 80 % safe zone |
-| `../og.png` | `metadata.openGraph.images` | 1200×630 share card |
-| `../favicon.ico` | browser default request | 48/32/16 px, from `icon-512.png` |
+| `logo-light.png` | `.brand-logo` in the site nav, sidebar and footer | `light` + `editorial` themes |
+| `logo-dark.png` | same, via `.brand-logo-dark` | `[data-theme="dark"]` |
+| `icon-192.png`, `icon-512.png` | `/manifest.webmanifest` (PWA install, also `purpose: maskable`) | install / splash |
+| `../og.png` | `metadata.openGraph.images` | 1200×630, link previews |
+| `../favicon.ico` | browser default request | 48/32/16 px |
 
-## The wordmark
+Only `logo-light.png` and `logo-dark.png` are referenced by components, so the
+header works as soon as those two exist. The rest are still 404ing and need the
+mark cropped out of the logo — the square part of the lockup, kept inside the
+80% safe zone so the maskable crop cannot clip it.
 
-One lockup, two lines, no separate icon: `Learning` in the text token,
-`Studio` in the accent token — the same two-tone treatment the `.brand em` rule
-gives the text brand. Typeface is the serif brand stack, weight 600.
+## Which file goes in which slot
 
-```
-[ Learning ]   ← var(--text)
-[ Studio   ]   ← var(--accent)
-```
+The slot is decided by **ink brightness, not by filename**: `logo-light.png`
+sits on the cream surfaces (`--bg #efe6dd`, `--surface #fbf7f2`) so it needs dark
+ink; `logo-dark.png` sits on `#0c0d10`/`#14161a` so it needs light ink. Drop the
+light-ink export (white "Learning") into `logo-dark.png` and the dark-ink export
+into `logo-light.png`, otherwise the word reads invisible on its own theme.
 
-## Geometry
+## Proportions
 
-The SVG canvas is **384 × 128 (exactly 3:1)** because `page.tsx` and
-`Sidebar.tsx` render `<img width={384} height={128}>`; the UA derives
-`aspect-ratio` from those attributes, and the stylesheet sizes the lockup with
-`height` + `width: auto`. A different canvas ratio would make the browser
-stretch the artwork.
+`globals.css` sizes the lockup with `height` only (`2.5rem` in the nav, `2.75rem`
+in the sidebar) and keeps `width: auto` + `aspect-ratio: auto`, so each file is
+displayed at its own ratio and can never be stretched — the `width={384}
+height={128}` attributes in `page.tsx`/`Sidebar.tsx` no longer constrain it, they
+only hint the box before the image decodes.
 
-Within that box the ink block is measured from real glyph metrics and scaled to
-fill the available height (12 px top/bottom padding), centred on both axes.
+Two consequences worth knowing:
 
-## Re-exporting the PNGs
+- Export both themes on the **same canvas size**. The current pair differs
+  (~3.5:1 vs ~4:1), so the lockup is ~19% wider in dark mode, which nudges the
+  chip next to it when the theme flips.
+- Any height ≥ 120 px is plenty for the nav slot, and ≥ 132 px for the sidebar.
+  A 500 px-tall export is ~12× oversampled: crisp, but re-export at ~2× if the
+  byte size matters.
 
-Colours track `src/app/globals.css`; update them there and re-export:
+## Versioning
 
-| | light | dark |
-| --- | --- | --- |
-| ink | `#241d18` | `#eaeaee` |
-| accent | `#8f4f2e` | `#e2a583` |
-
-Any SVG rasteriser works. At 3× (the shipped density) with resvg:
-
-```bash
-npx @resvg/resvg-js-cli logo-light.png 1152 logo-light.svg   # width in px
-convert icon-512.png -define icon:auto-resize=48,32,16 ../favicon.ico
-```
-
-Or open the SVGs in a vector editor and export at 1152 × 384 (logos) and
-512 × 512 (icon). Keep `width: auto` on `.brand-logo` — the display size lives
-in CSS, not in the file.
-
-> The repo's blanket `*.png` ignore rule is scoped back by `!public/**/*.png`
-> in `.gitignore`, so these files are versioned. Brand art belongs in the repo;
-> stray screenshots and Playwright artifacts do not.
+`.gitignore` ignores `*.png` repo-wide (build output, Playwright artifacts). The
+`!public/**/*.png` exception at the bottom of that file is what keeps brand art
+committed — without it the assets silently never reach a fresh clone, which is
+how `/brand/logo-light.png` ended up missing in the first place.

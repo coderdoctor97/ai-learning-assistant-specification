@@ -990,13 +990,16 @@ body {
 }
 
 /* Brand wordmark lockup — light/dark variants swapped on the theme attribute.
-   Heights are the only size driver: width stays `auto` so the artwork keeps its
-   intrinsic 3:1 proportion, and the lockup is sized to read as the anchor of
-   the row it sits in (nav / sidebar header) instead of shrinking next to it. */
+   Only `height` sizes the lockup: it is the anchor of the row it sits in (nav /
+   sidebar header), and 2.125rem read small against the 24px controls beside it.
+   `aspect-ratio: auto` overrides the ratio the UA derives from the markup's
+   width/height attributes, so the artwork is never stretched if the file's own
+   proportion differs — the exported lockup, not the stylesheet, owns its shape. */
 .brand-logo {
   display: block;
   width: auto;
   height: 2.5rem;
+  aspect-ratio: auto;
 }
 
 .brand-logo-sm {
