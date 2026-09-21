@@ -989,15 +989,18 @@ body {
   color: var(--accent);
 }
 
-/* Brand wordmark lockup — light/dark variants swapped on the theme attribute */
+/* Brand wordmark lockup — light/dark variants swapped on the theme attribute.
+   Heights are the only size driver: width stays `auto` so the artwork keeps its
+   intrinsic 3:1 proportion, and the lockup is sized to read as the anchor of
+   the row it sits in (nav / sidebar header) instead of shrinking next to it. */
 .brand-logo {
   display: block;
   width: auto;
-  height: 2.125rem;
+  height: 2.5rem;
 }
 
 .brand-logo-sm {
-  height: 2.5rem;
+  height: 2.75rem;
 }
 
 .brand-footer {
