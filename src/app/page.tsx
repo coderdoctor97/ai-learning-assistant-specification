@@ -50,9 +50,11 @@ export default function LandingPage() {
       {/* Navigation ---------------------------------------------------- */}
       <header className="site-nav glass">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-6 py-3.5">
-          <Link href="/" className="brand">
-            {t("app.brandFirst")}
-            <em>{t("app.brandSecond")}</em>
+          <Link href="/" className="brand" aria-label="Learning Studio">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/logo-light.png" alt="" width={384} height={128} className="brand-logo" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/logo-dark.png" alt="" width={384} height={128} className="brand-logo brand-logo-dark" />
           </Link>
           <span className="chip chip-on hidden sm:inline-flex">local-first</span>
           <nav className="ml-auto flex items-center gap-1" aria-label="Primary">
@@ -201,9 +203,11 @@ export default function LandingPage() {
       {/* Footer -------------------------------------------------------- */}
       <footer className="site-footer">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-6 py-7">
-          <span className="brand text-small">
-            {t("app.brandFirst")}
-            <em>{t("app.brandSecond")}</em>
+          <span className="brand brand-footer" aria-label="Learning Studio">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/logo-light.png" alt="" width={384} height={128} className="brand-logo" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/logo-dark.png" alt="" width={384} height={128} className="brand-logo brand-logo-dark" />
           </span>
           <span>
             {t("landing.footer.storage")} <span className="font-mono">.data/studio.db</span>

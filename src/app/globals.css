@@ -989,6 +989,38 @@ body {
   color: var(--accent);
 }
 
+/* Brand wordmark lockup — light/dark variants swapped on the theme attribute */
+.brand-logo {
+  display: block;
+  width: auto;
+  height: 2.125rem;
+}
+
+.brand-logo-sm {
+  height: 2.5rem;
+}
+
+.brand-footer {
+  display: flex;
+  align-items: center;
+}
+
+.brand-footer .brand-logo {
+  height: 1.375rem;
+}
+
+.brand-logo-dark {
+  display: none;
+}
+
+[data-theme="dark"] .brand-logo:not(.brand-logo-dark) {
+  display: none;
+}
+
+[data-theme="dark"] .brand-logo-dark {
+  display: block;
+}
+
 .nav-link {
   padding: 0.4rem 0.6rem;
   font-size: var(--type-xs);

@@ -22,9 +22,6 @@ export const metadata: Metadata = {
   applicationName: "Learning Studio",
   keywords: ["learning", "AI tutor", "study engine", "local-first", "spaced learning", "methodologies"],
   authors: [{ name: "Learning Studio" }],
-  icons: {
-    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
-  },
   manifest: "/manifest.webmanifest",
   openGraph: {
     type: "website",
@@ -34,12 +31,14 @@ export const metadata: Metadata = {
       "Pick a teaching methodology, hand the engine a topic, and it runs the workflow one stage at a time — fully on your machine.",
     url: "/",
     locale: "en",
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "Learning Studio" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Learning Studio — structured AI learning engine",
     description:
       "A local-first, model-independent AI learning studio that executes configurable teaching workflows stage by stage.",
+    images: ["/og.png"],
   },
   robots: { index: true, follow: true },
 };

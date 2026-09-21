@@ -300,9 +300,11 @@ export function Sidebar({
         tabIndex={-1}
       >
         <div className="flex items-center gap-2 px-3 py-3">
-          <Link href="/" className="font-serif text-small font-semibold tracking-tight">
-            {t("app.brandFirst")}
-            <span className="text-accent">{t("app.brandSecond")}</span>
+          <Link href="/" className="brand" aria-label="Learning Studio">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/logo-light.png" alt="" width={384} height={128} className="brand-logo brand-logo-sm" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/logo-dark.png" alt="" width={384} height={128} className="brand-logo brand-logo-sm brand-logo-dark" />
           </Link>
           <button
             type="button"
