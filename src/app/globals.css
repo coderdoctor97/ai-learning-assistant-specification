@@ -990,20 +990,28 @@ body {
 }
 
 /* Brand wordmark lockup — light/dark variants swapped on the theme attribute.
-   Only `height` sizes the lockup: it is the anchor of the row it sits in (nav /
-   sidebar header), and 2.125rem read small against the 24px controls beside it.
-   `aspect-ratio: auto` overrides the ratio the UA derives from the markup's
-   width/height attributes, so the artwork is never stretched if the file's own
-   proportion differs — the exported lockup, not the stylesheet, owns its shape. */
+   The lockup is sized through `width`, never `height`: `height: auto` lets the
+   artwork's own ratio dictate the box, so it can only ever get *smaller* on a
+   tight row, never squeezed sideways. (A height-anchored box does get squeezed:
+   the nav is a flex row, and below ~480px it clamps the width while the declared
+   height stays fixed — 2.16:1 instead of 3:1 at 360px.) `aspect-ratio: auto`
+   keeps the file's ratio in charge even if an export or the markup's
+   width/height attributes drift apart later.
+   Note the export is padded: only ~half of its 724px canvas is ink, so a 132px
+   box paints a ~22px mark + wordmark — that is the size that balances the 30px
+   "Open studio" button beside it (was 102×34 → ~17px of ink). The row is sized
+   by the logo, so it follows: 62px → 72px in the nav, 64px → 72px in the
+   sidebar header. */
 .brand-logo {
   display: block;
-  width: auto;
-  height: 2.5rem;
+  width: 8.25rem;
+  max-width: 100%;
+  height: auto;
   aspect-ratio: auto;
 }
 
 .brand-logo-sm {
-  height: 2.75rem;
+  width: 9rem;
 }
 
 .brand-footer {
@@ -1012,7 +1020,7 @@ body {
 }
 
 .brand-footer .brand-logo {
-  height: 1.375rem;
+  width: 4.125rem;
 }
 
 .brand-logo-dark {

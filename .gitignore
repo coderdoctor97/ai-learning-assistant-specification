@@ -56,9 +56,4 @@ test-results/
 playwright-report/
 blob-report/
 playwright/.cache/
-*.png
 
-# Brand imagery is part of the repo. The blanket *.png rule above is meant for
-# build and Playwright artifacts, not for the logo + icon set the app serves
-# from /public, so re-include anything under public/.
-!public/**/*.png
