@@ -5,6 +5,8 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { t, tPlural } from "@/lib/i18n";
+import { Icon } from "@/components/ui/Icon";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { cn } from "@/lib/cn";
 import type { AppState } from "@/lib/client/api";
 
@@ -119,15 +121,17 @@ export function NewSession({ state, busy, onCreate }: Props) {
                   </option>
                 ))}
               </select>
-              <button
-                type="button"
-                className={cn("btn btn-xs", agent && "btn-primary")}
-                aria-pressed={agent}
-                onClick={() => setValue("dynamicAgent", !agent, { shouldDirty: true })}
-                title={t("newsession.agent.title")}
-              >
-                {t("newsession.agent.label", { state: agent ? t("newsession.agent.on") : t("newsession.agent.off") })}
-              </button>
+              <Tooltip content="Toggle dynamic AI agent stage planning" side="top">
+                <button
+                  type="button"
+                  className={cn("btn btn-xs inline-flex items-center gap-1.5", agent && "btn-primary")}
+                  aria-pressed={agent}
+                  onClick={() => setValue("dynamicAgent", !agent, { shouldDirty: true })}
+                >
+                  <Icon name="bot" className="shrink-0" />
+                  {t("newsession.agent.label", { state: agent ? t("newsession.agent.on") : t("newsession.agent.off") })}
+                </button>
+              </Tooltip>
               <button
                 className="btn btn-primary btn-xs ml-auto"
                 type="submit"
@@ -153,37 +157,44 @@ export function NewSession({ state, busy, onCreate }: Props) {
               {state.configs.map((config) => {
                 const active = config.id === selected?.id;
                 return (
-                  <button
-                    type="button"
-                    key={config.id}
-                    role="radio"
-                    aria-checked={active}
-                    onClick={() => setValue("configId", config.id, { shouldDirty: true })}
-                    className="config-card p-3"
-                    data-active={active}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm">{config.name}</span>
-                      <span className="chip">{tPlural("newsession.methodology.steps", config.steps.length, { count: config.steps.length })}</span>
-                      {config.builtIn ? null : <span className="chip chip-on">{t("newsession.methodology.custom")}</span>}
-                    </div>
-                    <p className="mt-1 text-xs leading-relaxed text-muted">{config.description}</p>
-                    <p className="mt-1.5 truncate text-micro text-muted">
-                      {config.steps.map((step) => step.title).join(" → ")}
-                    </p>
-                  </button>
+                  /* [A11y & SVG Enhancement] Methodology card with visual selection checkmark and tooltip */
+                  <Tooltip key={config.id} content={`Select ${config.name} learning methodology`} side="top">
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      onClick={() => setValue("configId", config.id, { shouldDirty: true })}
+                      className="config-card p-3 w-full text-left"
+                      data-active={active}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Icon name={active ? "checkCircle2" : "circle"} className={cn("w-4 h-4 shrink-0", active ? "text-accent" : "text-muted")} />
+                        <span className="font-medium text-sm">{config.name}</span>
+                        <span className="chip ml-auto">{tPlural("newsession.methodology.steps", config.steps.length, { count: config.steps.length })}</span>
+                        {config.builtIn ? null : <span className="chip chip-on">{t("newsession.methodology.custom")}</span>}
+                      </div>
+                      <p className="mt-1 text-xs leading-relaxed text-muted">{config.description}</p>
+                      <p className="mt-1.5 truncate text-micro text-muted">
+                        {config.steps.map((step) => step.title).join(" → ")}
+                      </p>
+                    </button>
+                  </Tooltip>
                 );
               })}
             </div>
           </div>
 
           {!modelReady ? (
-            <div className="card card-warn p-3 text-xs leading-relaxed">
-              {t("newsession.modelWarning")}{" "}
-              <Link href="/settings" className="text-accent underline underline-offset-2">
-                {t("newsession.modelWarningLink")}
-              </Link>
-              {t("newsession.modelWarningSuffix")}
+            /* [A11y & SVG Enhancement] Model warning alert banner with icon */
+            <div className="card card-warn p-3 text-xs leading-relaxed flex items-start gap-2">
+              <Icon name="alertTriangle" className="w-4 h-4 shrink-0 text-amber-500 mt-0.5" />
+              <div>
+                {t("newsession.modelWarning")}{" "}
+                <Link href="/settings" className="text-accent underline underline-offset-2">
+                  {t("newsession.modelWarningLink")}
+                </Link>
+                {t("newsession.modelWarningSuffix")}
+              </div>
             </div>
           ) : null}
 

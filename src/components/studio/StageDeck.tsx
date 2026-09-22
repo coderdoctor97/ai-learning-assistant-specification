@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Markdown } from "@/components/Markdown";
 import { Collapsible } from "@/components/ui/Collapsible";
 import { Icon } from "@/components/ui/Icon";
+import { Tooltip } from "@/components/ui/Tooltip";
+import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
 import type { Capabilities, SessionDetail } from "@/lib/client/api";
 import { AttachmentRow } from "./stage/AttachmentRow";
@@ -66,6 +68,7 @@ export function StageDeck({
   const busy = run !== null;
 
   const [question, setQuestion] = useState("");
+  const [copied, setCopied] = useState(false);
   const bodyRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -85,6 +88,8 @@ export function StageDeck({
   async function copy(text: string) {
     try {
       await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
       notify("info", t("studio.toast.clipboard"));
     } catch {
       notify("error", t("studio.toast.clipboardUnavailable"));
@@ -166,47 +171,69 @@ export function StageDeck({
               </div>
 
               {stage && !streamingHere ? (
-                <div className="stage-footer">
-                  <button type="button" className="btn btn-xs" onClick={() => copy(stage.content)}>
-                    <Icon name="copy" />
-                    {t("stage.copy")}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-xs"
-                    disabled={busy}
-                    onClick={() => onGenerate(stageIndex, "none")}
-                  >
-                    <Icon name="refresh" />
-                    {t("stage.regenerate")}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-xs"
-                    disabled={busy}
-                    onClick={() => onGenerate(stageIndex, "longer")}
-                  >
-                    {t("stage.longer")}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-xs"
-                    disabled={busy}
-                    onClick={() => onGenerate(stageIndex, "shorter")}
-                  >
-                    {t("stage.shorter")}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-xs"
-                    disabled={busy || !deeperAvailable}
-                    title={
-                      deeperAvailable ? t("stage.deeperTitle") : t("stage.deeperUnavailableTitle")
+                /* [A11y & SVG Enhancement] Stage card footer actions with SVG icons, copy state, spin animation and tooltips */
+                <div className="stage-footer flex flex-wrap gap-1.5">
+                  <Tooltip content={copied ? "Copied!" : "Copy stage content as formatted Markdown"} side="top">
+                    <button type="button" className="btn btn-xs inline-flex items-center gap-1.5" onClick={() => copy(stage.content)}>
+                      <Icon name={copied ? "check" : "copy"} className={cn("shrink-0", copied && "text-emerald-500")} />
+                      {copied ? "Copied" : t("stage.copy")}
+                    </button>
+                  </Tooltip>
+
+                  <Tooltip content="Re-generate response for this stage using active model" side="top">
+                    <button
+                      type="button"
+                      className="btn btn-xs inline-flex items-center gap-1.5"
+                      disabled={busy}
+                      onClick={() => onGenerate(stageIndex, "none")}
+                    >
+                      <Icon name="rotateCw" className={cn("shrink-0", busy && "animate-spin")} />
+                      {t("stage.regenerate")}
+                    </button>
+                  </Tooltip>
+
+                  <Tooltip content="Longer: Expand detail and provide worked examples" side="top">
+                    <button
+                      type="button"
+                      className="btn btn-xs inline-flex items-center gap-1.5"
+                      disabled={busy}
+                      onClick={() => onGenerate(stageIndex, "longer")}
+                    >
+                      <Icon name="maximize2" className="shrink-0" />
+                      {t("stage.longer")}
+                    </button>
+                  </Tooltip>
+
+                  <Tooltip content="Shorter: Summarize key points concisely" side="top">
+                    <button
+                      type="button"
+                      className="btn btn-xs inline-flex items-center gap-1.5"
+                      disabled={busy}
+                      onClick={() => onGenerate(stageIndex, "shorter")}
+                    >
+                      <Icon name="minimize2" className="shrink-0" />
+                      {t("stage.shorter")}
+                    </button>
+                  </Tooltip>
+
+                  <Tooltip
+                    content={
+                      deeperAvailable
+                        ? "Deeper: Perform deep analysis using active reasoning model"
+                        : t("stage.deeperUnavailableTitle")
                     }
-                    onClick={() => onGenerate(stageIndex, "deeper")}
+                    side="top"
                   >
-                    {t("stage.deeper")}
-                  </button>
+                    <button
+                      type="button"
+                      className="btn btn-xs inline-flex items-center gap-1.5"
+                      disabled={busy || !deeperAvailable}
+                      onClick={() => onGenerate(stageIndex, "deeper")}
+                    >
+                      <Icon name="sparkles" className="shrink-0" />
+                      {t("stage.deeper")}
+                    </button>
+                  </Tooltip>
                 </div>
               ) : null}
             </div>
@@ -215,7 +242,7 @@ export function StageDeck({
           {/* Reasoning + resources ------------------------------------------ */}
           <div className="mt-4 space-y-2">
             {reasoningEnabled ? (
-              <Collapsible title={t("stage.reasoning.title")} tone="accent">
+              <Collapsible title={t("stage.reasoning.title")} tone="accent" icon="brain">
                 {stageReasoning ? (
                   <pre className="max-h-72 max-w-prose overflow-auto whitespace-pre-wrap text-sm leading-relaxed text-muted">
                     {stageReasoning}
@@ -226,11 +253,11 @@ export function StageDeck({
               </Collapsible>
             ) : null}
 
-            <Collapsible title={t("stage.sources.title")} count={stageResources.length}>
+            <Collapsible title={t("stage.sources.title")} count={stageResources.length} icon="bookOpen">
               <ResourceList resources={stageResources} />
             </Collapsible>
 
-            <Collapsible title={t("stage.state.title")} tone="muted">
+            <Collapsible title={t("stage.state.title")} tone="muted" icon="activity">
               <div className="grid gap-3 text-sm leading-relaxed sm:grid-cols-2">
                 <div className="min-w-0">
                   <div className="label">{t("stage.state.understanding")}</div>
@@ -350,11 +377,11 @@ export function StageDeck({
       <div className="nav-bar flex min-w-0 items-center gap-2 px-4 py-3 sm:px-6 sm:py-3.5">
         <button
           type="button"
-          className="btn"
+          className="btn inline-flex items-center gap-1.5"
           disabled={stageIndex === 0 || busy}
           onClick={() => onStageIndex(Math.max(0, stageIndex - 1))}
         >
-          <Icon name="chevronLeft" />
+          <Icon name="chevronLeft" className="shrink-0" />
           {t("stage.nav.previous")}
         </button>
         <div className="stage-nav-title mx-auto min-w-0 truncate text-center text-xs uppercase tracking-wide text-muted" title={step?.title}>
@@ -364,7 +391,7 @@ export function StageDeck({
         {canGoNext ? (
           <button
             type="button"
-            className="btn btn-primary"
+            className="btn btn-primary inline-flex items-center gap-1.5"
             disabled={busy || !stage}
             onClick={async () => {
               const next = stageIndex + 1;
@@ -373,7 +400,7 @@ export function StageDeck({
             }}
           >
             {nextIsGenerated ? t("stage.nav.next") : t("stage.nav.generateNext")}
-            <Icon name="chevronRight" />
+            <Icon name="chevronRight" className="shrink-0" />
           </button>
         ) : (
           <span className="chip chip-on">{t("stage.nav.final")}</span>

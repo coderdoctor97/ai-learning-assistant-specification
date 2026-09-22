@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 import { Icon } from "@/components/ui/Icon";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
 import { api, type ProviderRow } from "@/lib/client/api";
@@ -175,15 +176,19 @@ export function ProviderCard({
                 {t("settings.provider.keySave")}
               </button>
               {provider.keySource === "stored" ? (
-                <button
-                  type="button"
-                  className="btn btn-xs"
-                  onClick={() =>
-                    guard(() => api.patchProvider({ id: provider.id, apiKey: null }), t("settings.provider.keyCleared"))
-                  }
-                >
-                  {t("settings.provider.keyClear")}
-                </button>
+                /* [A11y & SVG Enhancement] Clear API key button with keyRound icon and tooltip */
+                <Tooltip content="Clear saved API key from storage" side="top">
+                  <button
+                    type="button"
+                    className="btn btn-xs inline-flex items-center gap-1.5"
+                    onClick={() =>
+                      guard(() => api.patchProvider({ id: provider.id, apiKey: null }), t("settings.provider.keyCleared"))
+                    }
+                  >
+                    <Icon name="keyRound" className="shrink-0" />
+                    {t("settings.provider.keyClear")}
+                  </button>
+                </Tooltip>
               ) : null}
             </div>
             {errors.apiKey ? (
@@ -215,9 +220,13 @@ export function ProviderCard({
           {t("settings.provider.use")}
         </button>
         {!provider.builtIn ? (
-          <button type="button" className="btn btn-xs text-warn" onClick={() => setConfirmRemove(true)}>
-            {t("settings.provider.remove")}
-          </button>
+          /* [A11y & SVG Enhancement] Remove provider button with trash icon and tooltip */
+          <Tooltip content="Remove provider configuration" side="top">
+            <button type="button" className="btn btn-xs text-warn inline-flex items-center gap-1.5" onClick={() => setConfirmRemove(true)}>
+              <Icon name="trash2" className="shrink-0" />
+              {t("settings.provider.remove")}
+            </button>
+          </Tooltip>
         ) : null}
       </div>
 
@@ -242,22 +251,25 @@ export function ProviderCard({
 function DiscoverButton({ provider, guard, notify }: { provider: ProviderRow; guard: (action: () => Promise<unknown>, message?: string) => Promise<void>; notify: Notify }) {
   const [busy, setBusy] = useState(false);
   return (
-    <button
-      type="button"
-      className="btn btn-xs"
-      disabled={busy}
-      aria-busy={busy}
-      onClick={async () => {
-        setBusy(true);
-        await guard(async () => {
-          const result = await api.discoverModels(provider.id);
-          notify("info", t("settings.provider.discoveredFrom", { count: result.models.length, name: provider.name }));
-        });
-        setBusy(false);
-      }}
-    >
-      <Icon name="refresh" />
-      {busy ? t("settings.provider.checking") : t("settings.provider.testDiscover")}
-    </button>
+    /* [A11y & SVG Enhancement] Discover models button with spin icon and tooltip */
+    <Tooltip content="Ping provider API and discover available model IDs" side="top">
+      <button
+        type="button"
+        className="btn btn-xs inline-flex items-center gap-1.5"
+        disabled={busy}
+        aria-busy={busy}
+        onClick={async () => {
+          setBusy(true);
+          await guard(async () => {
+            const result = await api.discoverModels(provider.id);
+            notify("info", t("settings.provider.discoveredFrom", { count: result.models.length, name: provider.name }));
+          });
+          setBusy(false);
+        }}
+      >
+        <Icon name="refreshCw" className={cn("shrink-0", busy && "animate-spin")} />
+        {busy ? t("settings.provider.checking") : t("settings.provider.testDiscover")}
+      </button>
+    </Tooltip>
   );
 }
