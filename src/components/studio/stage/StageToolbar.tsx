@@ -2,6 +2,7 @@
 
 import { t } from "@/lib/i18n";
 import { Icon } from "@/components/ui/Icon";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import type { SessionDetail } from "@/lib/client/api";
 
@@ -78,23 +79,29 @@ export function StageToolbar({
           const reachable = generated || index === generatedCount || index <= session.currentStage + 1;
           const active = index === stageIndex;
           return (
-            <button
+            /* [A11y & SVG Enhancement] Step pill wrapped in Portal Tooltip with SVG check icon */
+            <Tooltip
               key={entry.id + index}
-              type="button"
-              disabled={!reachable || busy}
-              onClick={() => onStageIndex(index)}
-              className="step-pill disabled:opacity-disabled"
-              data-active={active}
-              data-generated={generated}
-              aria-current={active ? "step" : undefined}
-              tabIndex={active ? 0 : -1}
-              title={entry.instructions}
+              content={`Stage ${index + 1}: ${entry.title} — ${entry.instructions}`}
+              side="bottom"
+              strategy="portal"
             >
-              <span className="step-dot" data-generated={generated} aria-hidden="true">
-                {generated ? "✓" : index + 1}
-              </span>
-              <span className="step-pill-label">{entry.title}</span>
-            </button>
+              <button
+                type="button"
+                disabled={!reachable || busy}
+                onClick={() => onStageIndex(index)}
+                className="step-pill disabled:opacity-disabled"
+                data-active={active}
+                data-generated={generated}
+                aria-current={active ? "step" : undefined}
+                tabIndex={active ? 0 : -1}
+              >
+                <span className="step-dot inline-flex items-center justify-center" data-generated={generated} aria-hidden="true">
+                  {generated ? <Icon name="check" className="w-3 h-3" /> : index + 1}
+                </span>
+                <span className="step-pill-label">{entry.title}</span>
+              </button>
+            </Tooltip>
           );
         })}
       </div>

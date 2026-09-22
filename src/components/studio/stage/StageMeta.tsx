@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { t } from "@/lib/i18n";
 import { Icon } from "@/components/ui/Icon";
+import { Tooltip } from "@/components/ui/Tooltip";
 import type { LearningStep } from "@/lib/client/api";
 
 type Props = {
@@ -34,16 +35,19 @@ export function StageMeta({ step, stageIndex, stepsTotal, busy, onEditStep, onGe
           {step?.title}
         </h2>
         <div className="ml-auto flex items-center gap-1">
-          <button
-            type="button"
-            className="btn btn-ghost btn-xs"
-            aria-expanded={editing}
-            onClick={() => setEditing((value) => !value)}
-            disabled={busy}
-          >
-            <Icon name="pencil" />
-            {t("stage.editPrompt")}
-          </button>
+          {/* [A11y & SVG Enhancement] Edit stage prompt trigger with tooltip */}
+          <Tooltip content="Customize instructions and title for this stage" side="top">
+            <button
+              type="button"
+              className="btn btn-ghost btn-xs inline-flex items-center gap-1.5"
+              aria-expanded={editing}
+              onClick={() => setEditing((value) => !value)}
+              disabled={busy}
+            >
+              <Icon name="pencil" className="shrink-0" />
+              {t("stage.editPrompt")}
+            </button>
+          </Tooltip>
         </div>
       </div>
 

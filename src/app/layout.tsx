@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { t } from "@/lib/i18n";
+import { TooltipProvider } from "@/components/ui/Tooltip";
 import "./globals.css";
 
 /*
@@ -63,7 +64,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <a href="#main-content" className="skip-link">
           {t("app.skipToContent")}
         </a>
-        {children}
+        <TooltipProvider>{children}</TooltipProvider>
       </body>
     </html>
   );

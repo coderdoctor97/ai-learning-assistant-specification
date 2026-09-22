@@ -2,6 +2,7 @@
 
 import { t } from "@/lib/i18n";
 import { Icon } from "@/components/ui/Icon";
+import { Tooltip } from "@/components/ui/Tooltip";
 
 type Props = {
   value: string;
@@ -34,15 +35,18 @@ export function Composer({ value, onValueChange, busy, placeholder, onSubmit }: 
       />
       <div className="composer-actions">
         <span className="composer-hint">{t("stage.qa.shortcut")}</span>
-        <button
-          className="btn btn-primary ml-auto"
-          type="submit"
-          disabled={busy || !value.trim()}
-          aria-busy={busy}
-        >
-          <Icon name="send" />
-          {t("stage.qa.send")}
-        </button>
+        {/* [A11y & SVG Enhancement] Submit button with paper plane icon and shortcut tooltip */}
+        <Tooltip content="Send question (⌘+Enter)" side="top">
+          <button
+            className="btn btn-primary ml-auto inline-flex items-center gap-1.5"
+            type="submit"
+            disabled={busy || !value.trim()}
+            aria-busy={busy}
+          >
+            <Icon name="send" className="shrink-0" />
+            {t("stage.qa.send")}
+          </button>
+        </Tooltip>
       </div>
     </div>
   );

@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { t } from "@/lib/i18n";
 import { Icon } from "@/components/ui/Icon";
+import { Tooltip } from "@/components/ui/Tooltip";
 import type { AttachmentRow } from "@/lib/client/api";
 
 type Props = {
@@ -36,16 +37,19 @@ export function AttachmentRow({ attachments, busy, visionAvailable, onUpload, on
           if (file) await onUpload(file);
         }}
       />
-      <button
-        type="button"
-        className="btn btn-xs"
-        onClick={() => fileRef.current?.click()}
-        disabled={busy}
-        aria-busy={busy}
-      >
-        <Icon name="paperclip" />
-        {t("stage.attach.button")}
-      </button>
+      {/* [A11y & SVG Enhancement] Attach button with paperclip icon and supported formats tooltip */}
+      <Tooltip content="Attach documents or images (.pdf, .docx, .md, .png, .jpg)" side="top">
+        <button
+          type="button"
+          className="btn btn-xs inline-flex items-center gap-1.5"
+          onClick={() => fileRef.current?.click()}
+          disabled={busy}
+          aria-busy={busy}
+        >
+          <Icon name="paperclip" className="shrink-0" />
+          {t("stage.attach.button")}
+        </button>
+      </Tooltip>
       <span className="text-micro leading-relaxed text-muted">
         {visionAvailable ? t("stage.attach.hintImages") : t("stage.attach.hintNoImages")}
       </span>
@@ -63,14 +67,17 @@ export function AttachmentRow({ attachments, busy, visionAvailable, onUpload, on
                 {t("stage.attach.size", { size: Math.max(1, Math.round(attachment.size / 1024)) })}
               </span>
             </span>
-            <button
-              type="button"
-              className="icon-btn"
-              onClick={() => onDeleteAttachment(attachment.id)}
-              aria-label={t("stage.attach.remove", { name: attachment.name })}
-            >
-              <Icon name="close" />
-            </button>
+            {/* [A11y & SVG Enhancement] Remove attachment button with trash icon and portal tooltip */}
+            <Tooltip content={`Remove attachment ${attachment.name}`} side="top">
+              <button
+                type="button"
+                className="icon-btn"
+                onClick={() => onDeleteAttachment(attachment.id)}
+                aria-label={t("stage.attach.remove", { name: attachment.name })}
+              >
+                <Icon name="trash2" />
+              </button>
+            </Tooltip>
           </li>
         ))}
       </ul>

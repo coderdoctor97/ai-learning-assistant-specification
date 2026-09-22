@@ -6,6 +6,8 @@ import { ConfirmSheet, RenameSheet } from "@/components/ui/ConfirmSheet";
 import { Popover, handleMenuItemKeys, usePopover } from "@/components/ui/Popover";
 import { MiniProgressBar } from "@/components/ui/ProgressBar";
 import { Icon } from "@/components/ui/Icon";
+import { Tooltip } from "@/components/ui/Tooltip";
+import { cn } from "@/lib/cn";
 import { useMediaQuery } from "@/lib/useMediaQuery";
 import { formatDate, t, tPlural } from "@/lib/i18n";
 import { api, type AppState, type SessionSummary } from "@/lib/client/api";
@@ -134,15 +136,17 @@ function SessionMenu({
 }) {
   return (
     <Popover.Root>
-      <Popover.Trigger
-        className="icon-btn row-action absolute right-1 top-1 z-20"
-        hasPopup="menu"
-        title={t("sidebar.session.actions")}
-        aria-label={t("sidebar.session.actions")}
-        onClick={(event) => event.stopPropagation()}
-      >
-        <Icon name="more" />
-      </Popover.Trigger>
+      {/* [A11y & SVG Enhancement] Session row options trigger with accessible portal tooltip */}
+      <Tooltip content="Session options (Pin, Rename, Delete)" side="left">
+        <Popover.Trigger
+          className="icon-btn row-action absolute right-1 top-1 z-20"
+          hasPopup="menu"
+          aria-label={t("sidebar.session.actions")}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <Icon name="moreHorizontal" />
+        </Popover.Trigger>
+      </Tooltip>
       <SessionMenuItems session={session} state={state} act={act} onRename={onRename} onDeleteRequest={onDeleteRequest} />
     </Popover.Root>
   );
@@ -178,9 +182,12 @@ function SessionRow({
       >
         <div className="flex items-center gap-1.5">
           {session.pinned ? (
-            <span className="text-accent" aria-label={t("sidebar.pinned")}>
-              <Icon name="star" />
-            </span>
+            /* [A11y & SVG Enhancement] Pinned status star indicator with tooltip */
+            <Tooltip content="Pinned session" side="right">
+              <span className="text-accent" aria-label={t("sidebar.pinned")}>
+                <Icon name="star" />
+              </span>
+            </Tooltip>
           ) : null}
           <span className="truncate">{session.title}</span>
         </div>
@@ -274,29 +281,38 @@ export function Sidebar({
   if (showRail) {
     return (
       <aside className="sidebar-rail flex w-14 shrink-0 flex-col items-center gap-3 border-r border-line bg-surface py-4">
-        <button
-          type="button"
-          className="icon-btn"
-          onClick={isMobile ? () => onMobileOpen?.() : onToggleCollapse}
-          title={t("sidebar.expand")}
-          aria-label={t("sidebar.expand")}
-          aria-expanded={isMobile ? true : !collapsed}
-        >
-          <Icon name="menu" />
-        </button>
-        <button
-          type="button"
-          className="icon-btn bg-accent text-on-accent"
-          onClick={handleNew}
-          title={t("sidebar.newSessionShort")}
-          aria-label={t("sidebar.newSessionShort")}
-        >
-          <Icon name="plus" />
-        </button>
+        {/* [A11y & SVG Enhancement] Rail expand toggle with portal tooltip */}
+        <Tooltip content="Expand sidebar (⌘B)" side="right">
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={isMobile ? () => onMobileOpen?.() : onToggleCollapse}
+            aria-label={t("sidebar.expand")}
+            aria-expanded={isMobile ? true : !collapsed}
+          >
+            <Icon name="panelLeftOpen" />
+          </button>
+        </Tooltip>
+
+        {/* [A11y & SVG Enhancement] Rail new session trigger with portal tooltip */}
+        <Tooltip content="Create new learning session (⌘N)" side="right">
+          <button
+            type="button"
+            className="icon-btn bg-accent text-on-accent"
+            onClick={handleNew}
+            aria-label={t("sidebar.newSessionShort")}
+          >
+            <Icon name="plusSquare" />
+          </button>
+        </Tooltip>
+
         <div className="mt-auto">
-          <Link href="/settings" className="icon-btn" title={t("sidebar.settings")}>
-            <Icon name="settings" />
-          </Link>
+          {/* [A11y & SVG Enhancement] Rail settings link with portal tooltip */}
+          <Tooltip content="Open app settings (⌘,)" side="right">
+            <Link href="/settings" className="icon-btn" aria-label={t("sidebar.settings")}>
+              <Icon name="settings" />
+            </Link>
+          </Tooltip>
         </div>
       </aside>
     );
@@ -317,21 +333,26 @@ export function Sidebar({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/brand/logo-dark.png" alt="" width={384} height={128} className="brand-logo brand-logo-sm brand-logo-dark" />
           </Link>
-          <button
-            type="button"
-            className="icon-btn ml-auto"
-            onClick={isMobile ? onMobileClose : onToggleCollapse}
-            title={t("sidebar.collapse")}
-            aria-label={t("sidebar.collapse")}
-          >
-            <Icon name="chevronLeft" />
-          </button>
+          {/* [A11y & SVG Enhancement] Sidebar collapse trigger with tooltip */}
+          <Tooltip content="Collapse sidebar (⌘B)" side="left">
+            <button
+              type="button"
+              className="icon-btn ml-auto"
+              onClick={isMobile ? onMobileClose : onToggleCollapse}
+              aria-label={t("sidebar.collapse")}
+            >
+              <Icon name="panelLeftClose" />
+            </button>
+          </Tooltip>
         </div>
 
         <div className="space-y-2 px-3 pb-3">
-          <button type="button" className="btn btn-primary w-full" onClick={handleNew}>
-            <Icon name="plus" /> {t("sidebar.newSession")}
-          </button>
+          {/* [A11y & SVG Enhancement] Primary New Session button with leading SVG icon and tooltip */}
+          <Tooltip content="Start new session with custom topic (⌘N)" side="bottom">
+            <button type="button" className={cn("btn btn-primary w-full inline-flex items-center justify-center gap-2")} onClick={handleNew}>
+              <Icon name="plus" className="shrink-0" /> {t("sidebar.newSession")}
+            </button>
+          </Tooltip>
           <input
             className="input"
             type="search"
@@ -345,16 +366,18 @@ export function Sidebar({
         <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
           <div className="mb-1 flex items-center justify-between">
             <span className="label">{t("sidebar.projects")}</span>
-            <button
-              type="button"
-              className="icon-btn"
-              onClick={() => setCreatingProject((value) => !value)}
-              aria-expanded={creatingProject}
-              aria-label={t("sidebar.projects.add")}
-              title={t("sidebar.projects.add")}
-            >
-              <Icon name="plus" />
-            </button>
+            {/* [A11y & SVG Enhancement] Add project button with tooltip */}
+            <Tooltip content="Create a new project folder" side="right">
+              <button
+                type="button"
+                className="icon-btn"
+                onClick={() => setCreatingProject((value) => !value)}
+                aria-expanded={creatingProject}
+                aria-label={t("sidebar.projects.add")}
+              >
+                <Icon name="folderPlus" />
+              </button>
+            </Tooltip>
           </div>
           {creatingProject ? (
             <form
@@ -401,14 +424,17 @@ export function Sidebar({
                   >
                     {project.name} <span className="font-mono text-micro tabular-nums text-muted">({count})</span>
                   </button>
-                  <button
-                    type="button"
-                    className="icon-btn row-action absolute right-1 top-1"
-                    onClick={() => setDeleteProjectTarget({ id: project.id, name: project.name })}
-                    aria-label={`${t("sidebar.session.delete")}: ${project.name}`}
-                  >
-                    <Icon name="close" />
-                  </button>
+                  {/* [A11y & SVG Enhancement] Delete project action with trash icon and tooltip */}
+                  <Tooltip content={`Delete project ${project.name}`} side="left">
+                    <button
+                      type="button"
+                      className="icon-btn row-action absolute right-1 top-1"
+                      onClick={() => setDeleteProjectTarget({ id: project.id, name: project.name })}
+                      aria-label={`${t("sidebar.session.delete")}: ${project.name}`}
+                    >
+                      <Icon name="trash2" />
+                    </button>
+                  </Tooltip>
                 </div>
               );
             })}
@@ -465,8 +491,8 @@ export function Sidebar({
         </div>
 
         <div className="border-t border-line p-3">
-          <Link href="/settings" className="btn w-full justify-start" onClick={() => onMobileClose?.()}>
-            <Icon name="settings" className="text-muted" />
+          <Link href="/settings" className="btn w-full justify-start inline-flex items-center gap-2" onClick={() => onMobileClose?.()}>
+            <Icon name="settings" className="text-muted shrink-0" />
             {t("sidebar.settings")}
           </Link>
           <p className="mt-2 px-1 text-micro leading-relaxed text-muted">

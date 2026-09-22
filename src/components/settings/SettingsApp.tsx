@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ProviderCard } from "@/components/settings/ProviderCard";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 import { Icon } from "@/components/ui/Icon";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { ToastStack, useToastStack } from "@/components/ui/ToastStack";
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
@@ -173,42 +174,49 @@ function MethodologyEditor({
                 }}
               />
               {!readOnly ? (
+                /* [A11y & SVG Enhancement] Move step up/down and remove step triggers with SVG icons and tooltips */
                 <div className="flex shrink-0 gap-1">
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-xs"
-                    disabled={index === 0}
-                    onClick={() => {
-                      const steps = [...draft.steps];
-                      [steps[index - 1], steps[index]] = [steps[index], steps[index - 1]];
-                      setDraft({ ...draft, steps });
-                    }}
-                    aria-label={t("settings.methodology.moveUp")}
-                  >
-                    <Icon name="chevronDown" className="rotate-180" />
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-xs"
-                    disabled={index === draft.steps.length - 1}
-                    onClick={() => {
-                      const steps = [...draft.steps];
-                      [steps[index + 1], steps[index]] = [steps[index], steps[index + 1]];
-                      setDraft({ ...draft, steps });
-                    }}
-                    aria-label={t("settings.methodology.moveDown")}
-                  >
-                    <Icon name="chevronDown" />
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-xs text-warn"
-                    disabled={draft.steps.length <= 1}
-                    onClick={() => setDraft({ ...draft, steps: draft.steps.filter((_, i) => i !== index) })}
-                    aria-label={t("settings.methodology.removeStep")}
-                  >
-                    <Icon name="close" />
-                  </button>
+                  <Tooltip content="Move step up in sequence" side="top">
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-xs"
+                      disabled={index === 0}
+                      onClick={() => {
+                        const steps = [...draft.steps];
+                        [steps[index - 1], steps[index]] = [steps[index], steps[index - 1]];
+                        setDraft({ ...draft, steps });
+                      }}
+                      aria-label={t("settings.methodology.moveUp")}
+                    >
+                      <Icon name="arrowUp" className="shrink-0" />
+                    </button>
+                  </Tooltip>
+                  <Tooltip content="Move step down in sequence" side="top">
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-xs"
+                      disabled={index === draft.steps.length - 1}
+                      onClick={() => {
+                        const steps = [...draft.steps];
+                        [steps[index + 1], steps[index]] = [steps[index], steps[index + 1]];
+                        setDraft({ ...draft, steps });
+                      }}
+                      aria-label={t("settings.methodology.moveDown")}
+                    >
+                      <Icon name="arrowDown" className="shrink-0" />
+                    </button>
+                  </Tooltip>
+                  <Tooltip content="Remove this step from methodology" side="top">
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-xs text-warn"
+                      disabled={draft.steps.length <= 1}
+                      onClick={() => setDraft({ ...draft, steps: draft.steps.filter((_, i) => i !== index) })}
+                      aria-label={t("settings.methodology.removeStep")}
+                    >
+                      <Icon name="trash2" className="shrink-0" />
+                    </button>
+                  </Tooltip>
                 </div>
               ) : null}
             </div>
@@ -232,10 +240,10 @@ function MethodologyEditor({
       {!readOnly ? (
         <button
           type="button"
-          className="btn btn-xs mt-3"
+          className="btn btn-xs mt-3 inline-flex items-center gap-1.5"
           onClick={() => setDraft({ ...draft, steps: [...draft.steps, newStep()] })}
         >
-          <Icon name="plus" />
+          <Icon name="plus" className="shrink-0" />
           {t("settings.methodology.addStep")}
         </button>
       ) : null}
@@ -355,8 +363,8 @@ export function SettingsApp() {
   return (
     <main id="main-content" className="settings-page mx-auto min-h-dvh min-w-0 max-w-5xl px-4 py-6 sm:px-6 sm:py-8" tabIndex={-1}>
       <div className="flex min-w-0 flex-wrap items-center gap-3">
-        <Link href="/studio" className="btn btn-xs">
-          <Icon name="chevronLeft" />
+        <Link href="/studio" className="btn btn-xs inline-flex items-center gap-1.5">
+          <Icon name="chevronLeft" className="shrink-0" />
           {t("settings.back")}
         </Link>
         <h1 className="title-page">{t("settings.title")}</h1>
@@ -401,7 +409,7 @@ export function SettingsApp() {
             tabIndex={0}
             className="space-y-4"
           >
-              <h2 className="sr-only">{t("settings.tab.providers")}</h2>
+            <h2 className="sr-only">{t("settings.tab.providers")}</h2>
             {state.providers.map((provider) => (
               <ProviderCard
                 key={provider.id}
@@ -469,11 +477,11 @@ export function SettingsApp() {
                 </label>
                 <div className="flex min-w-0 flex-wrap gap-2 sm:col-span-2">
                   <button
-                    className="btn btn-primary"
+                    className="btn btn-primary inline-flex items-center gap-1.5"
                     type="submit"
                     disabled={!customProvider.name.trim() || !customProvider.baseUrl.trim()}
                   >
-                    <Icon name="plus" />
+                    <Icon name="plus" className="shrink-0" />
                     {t("settings.provider.custom.add")}
                   </button>
                 </div>
@@ -490,7 +498,7 @@ export function SettingsApp() {
             tabIndex={0}
             className="settings-split"
           >
-              <h2 className="sr-only">{t("settings.tab.methodologies")}</h2>
+            <h2 className="sr-only">{t("settings.tab.methodologies")}</h2>
             <div className="methodology-nav space-y-1">
               {state.configs.map((config) => (
                 <button
@@ -516,7 +524,7 @@ export function SettingsApp() {
               ))}
               <button
                 type="button"
-                className="btn btn-xs mt-2 w-full"
+                className="btn btn-xs mt-2 w-full inline-flex items-center justify-center gap-1.5"
                 onClick={() =>
                   guard(async () => {
                     const created = await api.createConfig({
@@ -537,7 +545,7 @@ export function SettingsApp() {
                   })
                 }
               >
-                <Icon name="plus" />
+                <Icon name="plus" className="shrink-0" />
                 {t("settings.methodology.create")}
               </button>
               {editorId ? (
@@ -575,7 +583,7 @@ export function SettingsApp() {
             tabIndex={0}
             className="grid min-w-0 gap-4 md:grid-cols-2"
           >
-              <h2 className="sr-only">{t("settings.tab.learner")}</h2>
+            <h2 className="sr-only">{t("settings.tab.learner")}</h2>
             <div className="card min-w-0 p-5">
               <h3 className="title-section">{t("settings.learner.title")}</h3>
               <p className="mt-1.5 max-w-prose text-sm leading-relaxed text-muted">{t("settings.learner.body")}</p>
@@ -689,7 +697,7 @@ export function SettingsApp() {
             tabIndex={0}
             className="space-y-4"
           >
-              <h2 className="sr-only">{t("settings.tab.skills")}</h2>
+            <h2 className="sr-only">{t("settings.tab.skills")}</h2>
             <div className="card min-w-0 p-5">
               <h3 className="title-section">{t("settings.skills.importTitle")}</h3>
               <p className="mt-1.5 max-w-prose text-sm leading-relaxed text-muted">{t("settings.skills.importBody")}</p>
@@ -701,35 +709,43 @@ export function SettingsApp() {
                   value={skillUrl}
                   onChange={(event) => setSkillUrl(event.target.value)}
                 />
-                <button
-                  type="button"
-                  className="btn btn-xs"
-                  disabled={!skillUrl.trim()}
-                  onClick={async () => {
-                    try {
-                      const result = await api.previewSkill(skillUrl.trim());
-                      setSkillPreview(result.preview);
-                    } catch (error) {
-                      notify("error", error instanceof Error ? error.message : t("settings.toast.actionFailed"));
+                {/* [A11y & SVG Enhancement] Skill preview button with eye icon and tooltip */}
+                <Tooltip content="Fetch skill metadata from URL" side="top">
+                  <button
+                    type="button"
+                    className="btn btn-xs inline-flex items-center gap-1.5"
+                    disabled={!skillUrl.trim()}
+                    onClick={async () => {
+                      try {
+                        const result = await api.previewSkill(skillUrl.trim());
+                        setSkillPreview(result.preview);
+                      } catch (error) {
+                        notify("error", error instanceof Error ? error.message : t("settings.toast.actionFailed"));
+                      }
+                    }}
+                  >
+                    <Icon name="eye" className="shrink-0" />
+                    {t("settings.skills.preview")}
+                  </button>
+                </Tooltip>
+                {/* [A11y & SVG Enhancement] Skill import button with fileDown icon and tooltip */}
+                <Tooltip content="Install skill into workspace" side="top">
+                  <button
+                    type="button"
+                    className="btn btn-xs btn-primary inline-flex items-center gap-1.5"
+                    disabled={!skillPreview}
+                    onClick={() =>
+                      guard(async () => {
+                        await api.importSkill(skillUrl.trim());
+                        setSkillPreview(null);
+                        setSkillUrl("");
+                      }, t("settings.skills.imported"))
                     }
-                  }}
-                >
-                  {t("settings.skills.preview")}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-xs btn-primary"
-                  disabled={!skillPreview}
-                  onClick={() =>
-                    guard(async () => {
-                      await api.importSkill(skillUrl.trim());
-                      setSkillPreview(null);
-                      setSkillUrl("");
-                    }, t("settings.skills.imported"))
-                  }
-                >
-                  {t("settings.skills.import")}
-                </button>
+                  >
+                    <Icon name="fileDown" className="shrink-0" />
+                    {t("settings.skills.import")}
+                  </button>
+                </Tooltip>
               </div>
               {skillPreview ? (
                 <div className="mt-3 rounded-xl border border-line bg-surface-muted p-3">
@@ -762,7 +778,8 @@ export function SettingsApp() {
                     >
                       {skill.enabled ? t("settings.skills.disable") : t("settings.skills.enable")}
                     </button>
-                    <button type="button" className="btn btn-xs text-warn" onClick={() => guard(() => api.deleteSkill(skill.id))}>
+                    <button type="button" className="btn btn-xs text-warn inline-flex items-center gap-1" onClick={() => guard(() => api.deleteSkill(skill.id))}>
+                      <Icon name="trash2" className="shrink-0" />
                       {t("settings.skills.remove")}
                     </button>
                   </div>
@@ -782,7 +799,7 @@ export function SettingsApp() {
             tabIndex={0}
             className="card min-w-0 p-5"
           >
-              <h2 className="sr-only">{t("settings.tab.data")}</h2>
+            <h2 className="sr-only">{t("settings.tab.data")}</h2>
             <h3 className="title-section">{t("settings.data.title")}</h3>
             <p className="mt-1.5 max-w-prose text-sm leading-relaxed text-muted">{t("settings.data.body")}</p>
             <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">

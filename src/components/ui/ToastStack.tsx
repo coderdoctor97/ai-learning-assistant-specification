@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { t } from "@/lib/i18n";
 import { Icon } from "./Icon";
+import { Tooltip } from "./Tooltip";
 
 export type ToastItem = { id: number; kind: "error" | "info"; message: string };
 
@@ -71,14 +72,17 @@ export function ToastStack({ toasts, onDismiss }: { toasts: ToastItem[]; onDismi
               {toast.kind === "error" ? <Icon name="warn" /> : <Icon name="check" />}
             </span>
             <span className="leading-relaxed">{toast.message}</span>
-            <button
-              type="button"
-              className="icon-btn ml-2"
-              onClick={() => onDismiss(toast.id)}
-              aria-label={t("studio.toast.dismiss")}
-            >
-              <Icon name="close" />
-            </button>
+            {/* [A11y & SVG Enhancement] Toast dismiss button with tooltip */}
+            <Tooltip content="Dismiss notification" side="left">
+              <button
+                type="button"
+                className="icon-btn ml-2"
+                onClick={() => onDismiss(toast.id)}
+                aria-label={t("studio.toast.dismiss")}
+              >
+                <Icon name="x" />
+              </button>
+            </Tooltip>
           </div>
         </div>
       ))}

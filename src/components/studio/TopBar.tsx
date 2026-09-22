@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Popover, handleMenuItemKeys, usePopover } from "@/components/ui/Popover";
 import { Icon } from "@/components/ui/Icon";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { cn } from "@/lib/cn";
 import { t, type MessageKey } from "@/lib/i18n";
 import type { AppState, Capabilities, ModelRow, ProviderRow, SessionRow } from "@/lib/client/api";
@@ -208,8 +209,18 @@ export function TopBar({
         (state.settings.contextLevel === "extended" && activeModel.contextLength < 40000) ||
         (state.settings.contextLevel === "balanced" && activeModel.contextLength < 16000)),
   );
-  const statusTone =
-    activeProvider?.status === "connected" ? "good" : activeProvider?.status === "error" ? "warn" : "muted";
+  const statusIcon =
+    activeProvider?.status === "connected"
+      ? "checkCircle2"
+      : activeProvider?.status === "error"
+      ? "alertTriangle"
+      : "circle";
+  const statusToneClass =
+    activeProvider?.status === "connected"
+      ? "text-emerald-500"
+      : activeProvider?.status === "error"
+      ? "text-amber-500"
+      : "text-muted";
 
   async function selectModel(model: ModelRow) {
     await onPatchSettings({ activeProviderId: model.providerId, activeModelId: model.modelId });
@@ -227,27 +238,31 @@ export function TopBar({
   return (
     <header className="studio-header studio-topbar z-20" aria-label="Studio controls">
       <div className="studio-topbar-primary">
-        <Link
-          href="/settings"
-          className="provider-chip"
-          title={activeProvider?.statusMessage ?? t("topbar.provider.statusTitle")}
-        >
-          <span className="status-led" data-tone={statusTone} aria-hidden="true" />
-          <span className="truncate font-medium">{activeProvider?.name ?? t("topbar.provider.none")}</span>
-          <span className="hidden text-micro text-muted sm:inline">
-            {activeProvider
-              ? activeProvider.status === "connected"
-                ? t("topbar.provider.connected")
-                : activeProvider.status
-              : t("topbar.provider.notSet")}
-          </span>
-        </Link>
+        {/* [A11y & SVG Enhancement] Provider status chip with semantic SVG icon and tooltip */}
+        <Tooltip content={`Provider status: ${activeProvider?.name ?? "None"} (${activeProvider?.status ?? "not set"})`} side="bottom">
+          <Link
+            href="/settings"
+            className="provider-chip inline-flex items-center gap-1.5"
+            title={activeProvider?.statusMessage ?? t("topbar.provider.statusTitle")}
+          >
+            <Icon name={statusIcon} className={cn("w-3.5 h-3.5 shrink-0", statusToneClass)} />
+            <span className="truncate font-medium">{activeProvider?.name ?? t("topbar.provider.none")}</span>
+            <span className="hidden text-micro text-muted sm:inline">
+              {activeProvider
+                ? activeProvider.status === "connected"
+                  ? t("topbar.provider.connected")
+                  : activeProvider.status
+                : t("topbar.provider.notSet")}
+            </span>
+          </Link>
+        </Tooltip>
 
         {/* Model picker — listbox popover ---------------------------------- */}
         <div className="relative min-w-0">
           <Popover.Root>
+            {/* [A11y & SVG Enhancement] Model picker trigger with rotating chevron */}
             <Popover.Trigger
-              className="btn btn-xs"
+              className="btn btn-xs inline-flex items-center gap-1.5"
               hasPopup="listbox"
               disabled={busy}
               onKeyDown={(event) => {
@@ -264,7 +279,7 @@ export function TopBar({
               <span className="model-picker-label truncate">
                 {activeModel ? activeModel.displayName : state.settings.activeModelId ?? t("topbar.model.select")}
               </span>
-              <Icon name="chevronDown" className="text-muted" />
+              <Icon name="chevronDown" className="text-muted shrink-0 transition-transform data-[state=open]:rotate-180" />
             </Popover.Trigger>
             <Popover.Content className="popover-surface card model-picker-panel left-0 top-full mt-1 p-3">
               <div className="flex items-center gap-2">
@@ -287,13 +302,14 @@ export function TopBar({
                   <button
                     key={provider.id}
                     type="button"
-                    className="chip hover:border-accent"
+                    className="chip hover:border-accent inline-flex items-center gap-1"
                     disabled={discovering !== null}
                     aria-busy={discovering === provider.id}
                     onClick={() => refreshProvider(provider.id)}
                     title={t("topbar.model.refreshTitle", { name: provider.name })}
                   >
-                    <Icon name="refresh" /> {provider.name}
+                    {/* [A11y & SVG Enhancement] Refresh icon with active spin animation */}
+                    <Icon name="refreshCw" className={cn("shrink-0", discovering === provider.id && "animate-spin")} /> {provider.name}
                   </button>
                 ))}
                 <Link href="/settings" className="chip hover:border-accent">
@@ -320,38 +336,48 @@ export function TopBar({
           ))}
         </select>
         {contextClamped ? (
-          <span
-            className="chip chip-warn"
-            title={t("topbar.context.clampedTitle", {
-              limit: (activeModel!.contextLength / 1000).toFixed(0),
-            })}
-          >
-            {t("topbar.context.clamped", { limit: (activeModel!.contextLength / 1000).toFixed(0) })}
-          </span>
+          /* [A11y & SVG Enhancement] Warning chip with leading warning icon and tooltip */
+          <Tooltip content="Active model context limit is lower than selected setting" side="bottom">
+            <span
+              className="chip chip-warn inline-flex items-center gap-1"
+              title={t("topbar.context.clampedTitle", {
+                limit: (activeModel!.contextLength / 1000).toFixed(0),
+              })}
+            >
+              <Icon name="alertTriangle" className="shrink-0 text-amber-500" />
+              {t("topbar.context.clamped", { limit: (activeModel!.contextLength / 1000).toFixed(0) })}
+            </span>
+          </Tooltip>
         ) : null}
 
-        <button
-          type="button"
-          className={cn("btn btn-xs", agentOn && "btn-primary")}
-          aria-pressed={agentOn}
-          onClick={() =>
-            session ? onPatchSession({ dynamicAgent: !agentOn }) : onPatchSettings({ dynamicAgent: !agentOn })
-          }
-          title={t("topbar.agent.title")}
-        >
-          {t("topbar.agent.label", { state: agentOn ? t("topbar.agent.on") : t("topbar.agent.off") })}
-        </button>
+        {/* [A11y & SVG Enhancement] Dynamic agent toggle button with bot icon and tooltip */}
+        <Tooltip content="Toggle dynamic AI agent stage planning" side="bottom">
+          <button
+            type="button"
+            className={cn("btn btn-xs inline-flex items-center gap-1.5", agentOn && "btn-primary")}
+            aria-pressed={agentOn}
+            onClick={() =>
+              session ? onPatchSession({ dynamicAgent: !agentOn }) : onPatchSettings({ dynamicAgent: !agentOn })
+            }
+          >
+            <Icon name="bot" className="shrink-0" />
+            {t("topbar.agent.label", { state: agentOn ? t("topbar.agent.on") : t("topbar.agent.off") })}
+          </button>
+        </Tooltip>
 
-        <button
-          type="button"
-          className={cn("btn btn-xs", state.settings.reasoningEnabled && capabilities.reasoning && "btn-primary")}
-          aria-pressed={state.settings.reasoningEnabled && capabilities.reasoning}
-          disabled={!capabilities.reasoning}
-          onClick={() => onPatchSettings({ reasoningEnabled: !state.settings.reasoningEnabled })}
-          title={capabilities.reasoning ? t("topbar.reasoning.titleOn") : t("topbar.reasoning.titleOff")}
-        >
-          {t("topbar.reasoning.label")}
-        </button>
+        {/* [A11y & SVG Enhancement] Reasoning toggle button with brain icon and tooltip */}
+        <Tooltip content={capabilities.reasoning ? t("topbar.reasoning.titleOn") : t("topbar.reasoning.titleOff")} side="bottom">
+          <button
+            type="button"
+            className={cn("btn btn-xs inline-flex items-center gap-1.5", state.settings.reasoningEnabled && capabilities.reasoning && "btn-primary")}
+            aria-pressed={state.settings.reasoningEnabled && capabilities.reasoning}
+            disabled={!capabilities.reasoning}
+            onClick={() => onPatchSettings({ reasoningEnabled: !state.settings.reasoningEnabled })}
+          >
+            <Icon name="brain" className="shrink-0" />
+            {t("topbar.reasoning.label")}
+          </button>
+        </Tooltip>
       </div>
 
       <div className="studio-topbar-meta">
@@ -363,19 +389,20 @@ export function TopBar({
         </div>
         <div className="theme-switch" role="radiogroup" aria-label={t("topbar.theme.groupLabel")}>
           {THEMES.map((theme) => (
-            <button
-              key={theme.key}
-              type="button"
-              role="radio"
-              aria-checked={state.settings.theme === theme.key}
-              className="theme-option"
-              data-active={state.settings.theme === theme.key}
-              onClick={() => onPatchSettings({ theme: theme.key })}
-              title={t("topbar.theme.title", { name: t(theme.labelKey) })}
-              aria-label={t("topbar.theme.title", { name: t(theme.labelKey) })}
-            >
-              <Icon name={theme.icon} />
-            </button>
+            /* [A11y & SVG Enhancement] Theme switcher radios with tooltips */
+            <Tooltip key={theme.key} content={`Switch theme: ${t(theme.labelKey)}`} side="bottom">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={state.settings.theme === theme.key}
+                className="theme-option"
+                data-active={state.settings.theme === theme.key}
+                onClick={() => onPatchSettings({ theme: theme.key })}
+                aria-label={t("topbar.theme.title", { name: t(theme.labelKey) })}
+              >
+                <Icon name={theme.icon} />
+              </button>
+            </Tooltip>
           ))}
         </div>
       </div>

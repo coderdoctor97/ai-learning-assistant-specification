@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { Markdown } from "@/components/Markdown";
 import { Icon } from "@/components/ui/Icon";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { useGhostExits } from "@/lib/motion";
 import { cn } from "@/lib/cn";
 import { t, tPlural } from "@/lib/i18n";
@@ -27,6 +29,13 @@ type Props = {
 export function QaThread({ stageId, stageIndex, stageMessages, run, busy, onCopy, onAsk, onEditQuestion }: Props) {
   const qaStreaming = run?.mode === "qa" && run.stageIndex === stageIndex;
   const { live, ghosts } = useGhostExits(stageMessages);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleCopyMessage = (id: string, text: string) => {
+    onCopy(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
   if (!live.length && !qaStreaming) {
     return (
@@ -50,16 +59,18 @@ export function QaThread({ stageId, stageIndex, stageMessages, run, busy, onCopy
               <div className="msg-head">{t("stage.qa.you")}</div>
               {message.content}
               <div className="msg-actions">
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-xs"
-                  disabled={busy}
-                  onClick={() => onEditQuestion(message.content)}
-                  title={t("stage.qa.editTitle")}
-                >
-                  <Icon name="pencil" />
-                  {t("stage.qa.edit")}
-                </button>
+                {/* [A11y & SVG Enhancement] Edit user question button with pencil icon and tooltip */}
+                <Tooltip content="Edit question and replace response" side="top">
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-xs inline-flex items-center gap-1.5"
+                    disabled={busy}
+                    onClick={() => onEditQuestion(message.content)}
+                  >
+                    <Icon name="pencil" className="shrink-0" />
+                    {t("stage.qa.edit")}
+                  </button>
+                </Tooltip>
               </div>
             </div>
           </div>
@@ -67,25 +78,35 @@ export function QaThread({ stageId, stageIndex, stageMessages, run, busy, onCopy
           <div key={message.id} className="msg msg-assistant">
             <div className="msg-head">{t("app.brandSecond")}</div>
             <Markdown className="prose-compact">{message.content}</Markdown>
-            <div className="msg-actions">
-              <button type="button" className="btn btn-ghost btn-xs" onClick={() => onCopy(message.content)}>
-                <Icon name="copy" />
-                {t("stage.copy")}
-              </button>
+            <div className="msg-actions flex items-center gap-2">
+              {/* [A11y & SVG Enhancement] Assistant answer copy button with 2s checkmark state */}
+              <Tooltip content={copiedId === message.id ? "Copied!" : "Copy answer to clipboard"} side="top">
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-xs inline-flex items-center gap-1.5"
+                  onClick={() => handleCopyMessage(message.id, message.content)}
+                >
+                  <Icon name={copiedId === message.id ? "check" : "copy"} className={cn("shrink-0", copiedId === message.id && "text-emerald-500")} />
+                  {copiedId === message.id ? "Copied" : t("stage.copy")}
+                </button>
+              </Tooltip>
+
               {(() => {
                 const asked = [...live.slice(0, position)].reverse().find((entry) => entry.role === "user");
                 if (!asked) return null;
                 return (
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-xs"
-                    disabled={busy}
-                    onClick={() => onAsk(stageId, asked.content)}
-                    title={t("stage.qa.regenerateTitle")}
-                  >
-                    <Icon name="refresh" />
-                    {t("stage.regenerate")}
-                  </button>
+                  /* [A11y & SVG Enhancement] Regenerate answer button with rotateCw icon and tooltip */
+                  <Tooltip content="Re-send question to generate a new answer" side="top">
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-xs inline-flex items-center gap-1.5"
+                      disabled={busy}
+                      onClick={() => onAsk(stageId, asked.content)}
+                    >
+                      <Icon name="rotateCw" className={cn("shrink-0", busy && "animate-spin")} />
+                      {t("stage.regenerate")}
+                    </button>
+                  </Tooltip>
                 );
               })()}
               {message.resources.length ? (
@@ -98,7 +119,7 @@ export function QaThread({ stageId, stageIndex, stageMessages, run, busy, onCopy
 
       {/* Exit ghosts: removed/regenerated messages fade out in place. */}
       {ghosts.map((message) => (
-          <div key={`ghost-${message.id}`} className={cn("msg msg-exit", message.role === "user" ? "msg-user ml-auto" : "msg-assistant")} aria-hidden="true">
+        <div key={`ghost-${message.id}`} className={cn("msg msg-exit", message.role === "user" ? "msg-user ml-auto" : "msg-assistant")} aria-hidden="true">
           {message.role === "user" ? (
             message.content
           ) : (
