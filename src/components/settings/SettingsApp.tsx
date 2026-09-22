@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ProviderCard } from "@/components/settings/ProviderCard";
+import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 import { Icon } from "@/components/ui/Icon";
+import { ToastStack, useToastStack } from "@/components/ui/ToastStack";
+import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
 import { applyTheme } from "@/lib/theme";
 import { api, type AppState, type ConfigRow, type LearningStep } from "@/lib/client/api";
@@ -60,12 +63,14 @@ function MethodologyEditor({
   setDraft,
   setEditorId,
   guard,
+  onRequestDelete,
 }: {
   config: ConfigRow | null;
   draft: { name: string; description: string; steps: LearningStep[] };
   setDraft: React.Dispatch<React.SetStateAction<{ name: string; description: string; steps: LearningStep[] } | null>>;
   setEditorId: (id: string | null) => void;
   guard: (action: () => Promise<unknown>, message?: string) => Promise<void>;
+  onRequestDelete: () => void;
 }) {
   if (!draft) return null;
   const readOnly = Boolean(config?.builtIn);
@@ -131,15 +136,7 @@ function MethodologyEditor({
               <button
                 type="button"
                 className="btn btn-xs text-warn"
-                onClick={() => {
-                  if (window.confirm(t("settings.methodology.deleteConfirm", { name: draft.name }))) {
-                    void guard(async () => {
-                      await api.deleteConfig(config!.id);
-                      setEditorId(null);
-                      setDraft(null);
-                    }, t("settings.methodology.deleted"));
-                  }
-                }}
+                onClick={onRequestDelete}
               >
                 {t("settings.methodology.delete")}
               </button>
@@ -253,20 +250,17 @@ export function SettingsApp() {
   const [tab, setTab] = useState<Tab>(() =>
     typeof window !== "undefined" && window.location.hash === "#methodologies" ? "methodologies" : "providers",
   );
-  const [toast, setToast] = useState<{ kind: "error" | "info"; message: string } | null>(null);
   const [editorId, setEditorId] = useState<string | null>(null);
   const [draft, setDraft] = useState<{ name: string; description: string; steps: LearningStep[] } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [skillUrl, setSkillUrl] = useState("");
   const [skillPreview, setSkillPreview] = useState<{ name: string; description: string; sourceFile: string; instructions: string } | null>(null);
   const [customProvider, setCustomProvider] = useState({ name: "", baseUrl: "", apiKey: "" });
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const notify = useCallback((kind: "error" | "info", message: string) => {
-    setToast({ kind, message });
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(null), kind === "error" ? 7000 : 3000);
-  }, []);
+  /* Shared feedback stack — same notify(kind, message) contract and the
+     same 7s/3s auto-dismiss timings the single toast used. */
+  const { toasts, notify, dismiss: dismissToast } = useToastStack({ error: 7000, info: 3000 });
 
   const refresh = useCallback(async () => {
     const next = await api.state();
@@ -343,8 +337,10 @@ export function SettingsApp() {
         </main>
       );
     }
+    /* Skeleton carries the same container geometry as the loaded branch so
+       the first paint matches the settled layout (zero-CLS on hydrate). */
     return (
-      <main id="main-content" tabIndex={-1}>
+      <main id="main-content" className="settings-page mx-auto min-h-dvh min-w-0 max-w-5xl px-4 py-6 sm:px-6 sm:py-8" tabIndex={-1}>
         <SettingsSkeleton />
       </main>
     );
@@ -363,7 +359,7 @@ export function SettingsApp() {
           <Icon name="chevronLeft" />
           {t("settings.back")}
         </Link>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("settings.title")}</h1>
+        <h1 className="title-page">{t("settings.title")}</h1>
         <span className="chip">{t("settings.tagline")}</span>
       </div>
 
@@ -421,7 +417,7 @@ export function SettingsApp() {
             ))}
 
             <div className="card min-w-0 p-5">
-              <h3 className="text-lg font-medium tracking-tight sm:text-xl">{t("settings.provider.custom.title")}</h3>
+              <h3 className="title-section">{t("settings.provider.custom.title")}</h3>
               <p className="mt-1.5 max-w-prose text-sm leading-relaxed text-muted">{t("settings.provider.custom.body")}</p>
               <form
                 className="settings-custom-form mt-4"
@@ -561,6 +557,7 @@ export function SettingsApp() {
                 setDraft={setDraft}
                 setEditorId={setEditorId}
                 guard={guard}
+                onRequestDelete={() => setConfirmDelete(true)}
               />
             ) : (
               <div className="card flex min-h-48 items-center justify-center p-10 text-center text-sm leading-relaxed text-muted">
@@ -580,7 +577,7 @@ export function SettingsApp() {
           >
               <h2 className="sr-only">{t("settings.tab.learner")}</h2>
             <div className="card min-w-0 p-5">
-              <h3 className="text-lg font-medium tracking-tight sm:text-xl">{t("settings.learner.title")}</h3>
+              <h3 className="title-section">{t("settings.learner.title")}</h3>
               <p className="mt-1.5 max-w-prose text-sm leading-relaxed text-muted">{t("settings.learner.body")}</p>
               {(
                 [
@@ -610,7 +607,7 @@ export function SettingsApp() {
             </div>
 
             <div className="card min-w-0 space-y-4 p-5">
-              <h3 className="text-lg font-medium tracking-tight sm:text-xl">{t("settings.generation.title")}</h3>
+              <h3 className="title-section">{t("settings.generation.title")}</h3>
               <label className="block min-w-0">
                 <span className="label">{t("settings.generation.context")}</span>
                 <select
@@ -694,7 +691,7 @@ export function SettingsApp() {
           >
               <h2 className="sr-only">{t("settings.tab.skills")}</h2>
             <div className="card min-w-0 p-5">
-              <h3 className="text-lg font-medium tracking-tight sm:text-xl">{t("settings.skills.importTitle")}</h3>
+              <h3 className="title-section">{t("settings.skills.importTitle")}</h3>
               <p className="mt-1.5 max-w-prose text-sm leading-relaxed text-muted">{t("settings.skills.importBody")}</p>
               <div className="mt-3 flex min-w-0 flex-wrap gap-2">
                 <input
@@ -751,7 +748,7 @@ export function SettingsApp() {
               <div key={skill.id} className="card min-w-0 p-5">
                 <div className="flex min-w-0 flex-wrap items-center gap-2">
                   <h4 className="text-base font-medium tracking-tight">{skill.name}</h4>
-                  <span className={`chip ${skill.enabled ? "chip-on" : ""}`}>
+                  <span className={cn("chip", skill.enabled && "chip-on")}>
                     {skill.enabled ? t("settings.skills.active") : t("settings.skills.inactive")}
                   </span>
                   <a className="chip hover:border-accent" href={skill.repoUrl} target="_blank" rel="noreferrer">
@@ -786,18 +783,18 @@ export function SettingsApp() {
             className="card min-w-0 p-5"
           >
               <h2 className="sr-only">{t("settings.tab.data")}</h2>
-            <h3 className="text-lg font-medium tracking-tight sm:text-xl">{t("settings.data.title")}</h3>
+            <h3 className="title-section">{t("settings.data.title")}</h3>
             <p className="mt-1.5 max-w-prose text-sm leading-relaxed text-muted">{t("settings.data.body")}</p>
-            <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
               {[
                 [t("settings.data.projects"), state.projects.length],
                 [t("settings.data.sessions"), state.sessions.length],
                 [t("settings.data.methodologies"), state.configs.length],
                 [t("settings.data.models"), state.models.length],
               ].map(([label, value]) => (
-                <div key={String(label)} className="min-w-0">
+                <div key={String(label)} className="kpi min-w-0">
                   <dt className="label">{label}</dt>
-                  <dd className="font-mono text-2xl font-semibold tabular-nums tracking-tight">{value}</dd>
+                  <dd className="kpi-value tabular-nums">{value}</dd>
                 </div>
               ))}
             </dl>
@@ -805,26 +802,26 @@ export function SettingsApp() {
         ) : null}
       </div>
 
-      {toast ? (
-        <div className="toast-layer pointer-events-none fixed inset-x-0 bottom-5 z-50 flex justify-center px-5" role="status" aria-live="polite">
-          <div className="toast card animate-rise pointer-events-auto w-full max-w-lg px-4 py-3 text-sm" data-tone={toast.kind}>
-            <div className="flex items-start gap-3">
-              <span className="toast-icon" aria-hidden="true">
-                {toast.kind === "error" ? <Icon name="warn" /> : <Icon name="check" />}
-              </span>
-              <span className="leading-relaxed">{toast.message}</span>
-              <button
-                type="button"
-                className="icon-btn ml-2"
-                onClick={() => setToast(null)}
-                aria-label={t("studio.toast.dismiss")}
-              >
-                <Icon name="close" />
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <ConfirmSheet
+        open={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        title={t("settings.methodology.delete")}
+        body={t("settings.methodology.deleteConfirm", { name: draft?.name ?? "" })}
+        confirmLabel={t("settings.methodology.delete")}
+        onConfirm={async () => {
+          const config = state.configs.find((entry) => entry.id === editorId);
+          if (!config) return;
+          await guard(
+            async () => {
+              await api.deleteConfig(config.id);
+              setEditorId(null);
+              setDraft(null);
+            },
+            t("settings.methodology.deleted"),
+          );
+        }}
+      />
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </main>
   );
 }

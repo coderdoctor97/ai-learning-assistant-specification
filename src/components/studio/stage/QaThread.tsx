@@ -3,6 +3,7 @@
 import { Markdown } from "@/components/Markdown";
 import { Icon } from "@/components/ui/Icon";
 import { useGhostExits } from "@/lib/motion";
+import { cn } from "@/lib/cn";
 import { t, tPlural } from "@/lib/i18n";
 import type { RunState } from "@/components/studio/StageDeck";
 import type { MessageRow } from "@/lib/client/api";
@@ -26,6 +27,19 @@ type Props = {
 export function QaThread({ stageId, stageIndex, stageMessages, run, busy, onCopy, onAsk, onEditQuestion }: Props) {
   const qaStreaming = run?.mode === "qa" && run.stageIndex === stageIndex;
   const { live, ghosts } = useGhostExits(stageMessages);
+
+  if (!live.length && !qaStreaming) {
+    return (
+      <div className="thread">
+        <div className="empty-state" role="status">
+          <span className="empty-state-icon">
+            <Icon name="send" />
+          </span>
+          <p className="max-w-prose text-sm leading-relaxed">{t("stage.qa.empty")}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="thread">
@@ -84,7 +98,7 @@ export function QaThread({ stageId, stageIndex, stageMessages, run, busy, onCopy
 
       {/* Exit ghosts: removed/regenerated messages fade out in place. */}
       {ghosts.map((message) => (
-        <div key={`ghost-${message.id}`} className={`msg ${message.role === "user" ? "msg-user ml-auto" : "msg-assistant"} msg-exit`} aria-hidden="true">
+          <div key={`ghost-${message.id}`} className={cn("msg msg-exit", message.role === "user" ? "msg-user ml-auto" : "msg-assistant")} aria-hidden="true">
           {message.role === "user" ? (
             message.content
           ) : (

@@ -18,7 +18,7 @@ export function ExportBar({ sessionId }: { sessionId: string }) {
     <div className="export-bar card animate-rise mt-6 p-5">
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         <span className="chip chip-on">{t("stage.export.complete")}</span>
-        <h3 className="text-lg font-medium tracking-tight sm:text-xl">{t("stage.export.title")}</h3>
+        <h3 className="title-section">{t("stage.export.title")}</h3>
       </div>
       <p className="mt-1.5 max-w-prose text-sm leading-relaxed text-muted">{t("stage.export.body")}</p>
       <div className="export-actions mt-3">

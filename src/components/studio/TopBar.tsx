@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Popover, handleMenuItemKeys, usePopover } from "@/components/ui/Popover";
 import { Icon } from "@/components/ui/Icon";
+import { cn } from "@/lib/cn";
 import { t, type MessageKey } from "@/lib/i18n";
 import type { AppState, Capabilities, ModelRow, ProviderRow, SessionRow } from "@/lib/client/api";
 
@@ -43,7 +44,7 @@ function CapabilityChips({ capabilities }: { capabilities: Capabilities }) {
         return (
           <span
             key={key}
-            className={`chip ${supported ? "chip-on" : "chip-off"}`}
+            className={cn("chip", supported ? "chip-on" : "chip-off")}
             title={
               supported
                 ? t("topbar.capability.supported", { capability: label })
@@ -331,7 +332,7 @@ export function TopBar({
 
         <button
           type="button"
-          className={`btn btn-xs ${agentOn ? "btn-primary" : ""}`}
+          className={cn("btn btn-xs", agentOn && "btn-primary")}
           aria-pressed={agentOn}
           onClick={() =>
             session ? onPatchSession({ dynamicAgent: !agentOn }) : onPatchSettings({ dynamicAgent: !agentOn })
@@ -343,7 +344,7 @@ export function TopBar({
 
         <button
           type="button"
-          className={`btn btn-xs ${state.settings.reasoningEnabled && capabilities.reasoning ? "btn-primary" : ""}`}
+          className={cn("btn btn-xs", state.settings.reasoningEnabled && capabilities.reasoning && "btn-primary")}
           aria-pressed={state.settings.reasoningEnabled && capabilities.reasoning}
           disabled={!capabilities.reasoning}
           onClick={() => onPatchSettings({ reasoningEnabled: !state.settings.reasoningEnabled })}

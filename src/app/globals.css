@@ -48,6 +48,11 @@
   --type-h1: clamp(1.95rem, 1.55rem + 1.5vw, 2.6rem);
   --type-h2: 1.4rem;
   --type-h3: 1.0625rem;
+  /* Page/section/card tiers: one token owns the app heading scale so JSX
+     never mixes raw Tailwind sizes (text-2xl/text-lg/text-base) in chrome. */
+  --type-page: clamp(1.5rem, 1.35rem + 0.6vw, 1.875rem);
+  --type-section: 1.25rem;
+  --type-card: 1rem;
   --type-body: 1rem;
   --type-sm: 0.9375rem;
   --type-xs: 0.8125rem;
@@ -112,6 +117,9 @@
   --disabled-opacity: 0.45;
   /* Accent wash behind accent-foreground pairs. */
   --accent-soft-border: color-mix(in srgb, var(--accent) 38%, transparent);
+  /* Modal backdrop: inked per theme at use time (same recipe as the
+     mobile drawer backdrop) so dialogs sit in the ambient palette. */
+  --dialog-backdrop: color-mix(in srgb, var(--bg-deep) 72%, transparent);
 
   color-scheme: light;
 }
@@ -268,7 +276,9 @@ body {
     .step-pill,
     .sidebar-item,
     .provider-chip,
-    .skip-link:focus-visible
+    .skip-link:focus-visible,
+    .dialog-surface,
+    .kpi
   ) {
     outline: 1px solid CanvasText;
     outline-offset: -1px;
@@ -332,7 +342,9 @@ body {
   }
 
   .card-elevated {
-    background: var(--surface);
+    /* True glass: 82% surface so the ambient canvas reads through the
+       blur (opaque backgrounds made the filter dead weight). */
+    background: color-mix(in srgb, var(--surface) 82%, transparent);
     border: 1px solid var(--border);
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-2);
@@ -443,6 +455,17 @@ body {
     background: var(--surface2);
     border-color: transparent;
     box-shadow: none;
+  }
+
+  /* Destructive confirmation — same surface language, warn ink. */
+  .btn-warn {
+    color: var(--warn);
+    border-color: color-mix(in srgb, var(--warn) 40%, transparent);
+  }
+
+  .btn-warn:hover:not(:disabled) {
+    background: var(--surface2);
+    border-color: var(--warn);
   }
 
   .btn-xs {
@@ -590,6 +613,11 @@ body {
     opacity: var(--disabled-opacity);
   }
 
+  /* Shared press feel — the .btn active-scale pattern extended to chips. */
+  button.chip:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
   button.chip:focus-visible,
   a.chip:focus-visible {
     outline: 2px solid color-mix(in srgb, var(--accent) 75%, transparent);
@@ -613,6 +641,28 @@ body {
     color: var(--muted);
     text-transform: uppercase;
     letter-spacing: var(--tracking-label);
+  }
+
+  /* ---- Heading scale (one token owns app chrome typography) ---------- */
+  .title-page {
+    font-size: var(--type-page);
+    font-weight: 600;
+    line-height: var(--leading-title);
+    letter-spacing: var(--tracking-title);
+    text-wrap: balance;
+  }
+
+  .title-section {
+    font-size: var(--type-section);
+    font-weight: 500;
+    line-height: 1.25;
+    letter-spacing: var(--tracking-title);
+  }
+
+  .title-card {
+    font-size: var(--type-card);
+    font-weight: 500;
+    letter-spacing: -0.008em;
   }
 
   /* ---- Navigation rows ------------------------------------------- */
@@ -1016,6 +1066,163 @@ body {
     display: flex;
     gap: var(--space-1);
     align-items: center;
+  }
+
+  /* ---- Dialog & bottom sheet (replaces window.prompt/confirm) ----------- */
+  .dialog-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    cursor: pointer;
+    background: var(--dialog-backdrop);
+    border: 0;
+    backdrop-filter: blur(8px);
+  }
+
+  .dialog-viewport {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: grid;
+    place-items: end;
+    pointer-events: none;
+  }
+
+  .dialog-surface {
+    display: grid;
+    gap: var(--space-2);
+    width: 100%;
+    padding: var(--space-2) var(--space-2) calc(var(--space-2) + env(safe-area-inset-bottom));
+    pointer-events: auto;
+    outline: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-bottom: 0;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    box-shadow: var(--shadow-3);
+    animation: sheetIn var(--dur-quick) var(--ease-out) both;
+  }
+
+  /* Centre from md up; bottom sheet at ≤767px (plan: Vaul geometry on
+     phones, matching the mobile-shell drawer breakpoint). */
+  @media (width >= 768px) {
+    .dialog-viewport {
+      place-items: center;
+      padding: var(--space-3);
+    }
+
+    .dialog-surface {
+      max-width: 26rem;
+      padding: var(--space-3);
+      border-radius: var(--radius-xl);
+      animation: dialogIn var(--dur-quick) var(--ease-out-soft) both;
+    }
+  }
+
+  /* Mobile sheet affordance (hidden on the centered desktop dialog). */
+  .dialog-handle {
+    display: block;
+    width: 3rem;
+    height: 4px;
+    margin: 0 auto;
+    background: color-mix(in srgb, var(--text) 18%, transparent);
+    border-radius: var(--radius-pill);
+  }
+
+  @media (width >= 768px) {
+    .dialog-handle {
+      display: none;
+    }
+  }
+
+  .dialog-title {
+    font-size: var(--type-card);
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--text);
+  }
+
+  .dialog-body {
+    font-size: var(--type-sm);
+    line-height: var(--leading-body);
+    color: var(--muted);
+  }
+
+  .dialog-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    justify-content: flex-end;
+    padding-top: var(--space-1);
+    margin-top: var(--space-half);
+    border-top: 1px solid var(--border-soft);
+  }
+
+  /* ---- Toast stack (shared feedback, Sonner geometry) ------------------- */
+  .toast-stack {
+    position: fixed;
+    right: 0;
+    bottom: var(--space-2);
+    left: 0;
+    z-index: 70;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    align-items: center;
+    pointer-events: none;
+  }
+
+  .toast-stack .toast {
+    max-width: 28rem;
+    pointer-events: auto;
+    animation: toastIn var(--dur-quick) var(--ease-spring) both;
+  }
+
+  /* ---- Empty states ------------------------------------------------------ */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-half);
+    align-items: center;
+    padding: var(--space-3) var(--space-1);
+    color: var(--muted);
+    text-align: center;
+  }
+
+  .empty-state-icon {
+    display: inline-flex;
+    color: color-mix(in srgb, var(--muted) 55%, transparent);
+  }
+
+  /* ---- KPI cards (data tab bento) ---------------------------------------- */
+  .kpi {
+    min-width: 0;
+    padding: var(--space-2);
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+  }
+
+  .kpi-value {
+    font-family: var(--font-mono);
+    font-size: var(--type-h2);
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+
+  /* Coarse-pointer parity with .btn: every interactive primitive opts out
+     of double-tap zoom / tap delay on touch (Phase 5 mobile ergonomics). */
+  .icon-btn,
+  .chip,
+  .step-pill,
+  .menu-item,
+  .theme-option,
+  .config-card,
+  .sidebar-item,
+  .dialog-backdrop {
+    touch-action: manipulation;
   }
 }
 
@@ -1754,6 +1961,11 @@ body {
   transform: translateY(-1px);
 }
 
+/* Shared press feel — the .btn active-scale pattern extended to pills. */
+.step-pill:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
 .step-pill-label {
   max-width: 9rem;
   overflow: hidden;
@@ -2249,6 +2461,42 @@ body {
   }
 }
 
+@keyframes sheetIn {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dialogIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 /* Decorative progress bar in the landing showcase fills on first paint. */
 .progress-fill-grow {
   animation: growX 1.15s var(--ease-out) 420ms both;
@@ -2446,7 +2694,9 @@ html.theme-fade *::after {
   .popover-surface,
   .menu-surface,
   [data-reveal],
-  .skeleton::after {
+  .skeleton::after,
+  .dialog-surface,
+  .toast-stack .toast {
     opacity: 1 !important;
     transform: none !important;
     animation: none !important;
@@ -2469,7 +2719,9 @@ html.theme-fade *::after {
   .btn,
   .btn:hover:not(:disabled),
   .btn:active:not(:disabled),
-  .step-pill:not([data-active="true"]):hover:not(:disabled) {
+  button.chip:active:not(:disabled),
+  .step-pill:not([data-active="true"]):hover:not(:disabled),
+  .step-pill:active:not(:disabled) {
     transform: none !important;
     will-change: auto;
   }
@@ -2520,6 +2772,7 @@ html.theme-fade *::after {
 
   .sidebar-rail .icon-btn,
   .sidebar-panel .icon-btn,
+  .toast-stack .icon-btn,
   .theme-option {
     min-width: var(--target-touch);
     min-height: var(--target-touch);
@@ -2570,7 +2823,10 @@ html.theme-fade *::after {
   .skip-link,
   .toast-layer,
   .cta-band .btn,
-  .export-bar {
+  .export-bar,
+  .dialog-backdrop,
+  .dialog-viewport,
+  .toast-stack {
     display: none;
   }
 

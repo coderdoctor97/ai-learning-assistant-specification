@@ -30,7 +30,7 @@ export function StageMeta({ step, stageIndex, stepsTotal, busy, onEditStep, onGe
     <>
       <div className="stage-toolbar">
         <span className="label">{t("stage.label", { index: stageIndex + 1, total: stepsTotal })}</span>
-        <h2 className="min-w-0 truncate text-lg font-medium tracking-tight sm:text-xl" title={step?.title}>
+        <h2 className="title-section min-w-0 truncate" title={step?.title}>
           {step?.title}
         </h2>
         <div className="ml-auto flex items-center gap-1">

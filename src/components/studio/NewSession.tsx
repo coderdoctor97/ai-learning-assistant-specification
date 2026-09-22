@@ -5,6 +5,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { t, tPlural } from "@/lib/i18n";
+import { cn } from "@/lib/cn";
 import type { AppState } from "@/lib/client/api";
 
 type Props = {
@@ -76,7 +77,7 @@ export function NewSession({ state, busy, onCreate }: Props) {
       <div className="mx-auto max-w-3xl">
         <div className="animate-rise">
           <span className="chip chip-on">{t("newsession.badge")}</span>
-          <h1 className="mt-3 font-serif text-3xl leading-tight">{t("newsession.title")}</h1>
+          <h1 className="title-page mt-3 font-serif">{t("newsession.title")}</h1>
           <p className="mt-2 text-sm leading-relaxed text-muted">{t("newsession.lede")}</p>
         </div>
 
@@ -87,7 +88,7 @@ export function NewSession({ state, busy, onCreate }: Props) {
             </label>
             <textarea
               id="new-session-topic"
-              className="textarea min-h-[5.5rem] border-0 bg-transparent p-0 text-base focus:shadow-none"
+              className="textarea min-h-20 border-0 bg-transparent p-0 text-base focus:shadow-none"
               placeholder={t("newsession.topic.placeholder")}
               autoFocus
               aria-invalid={errors.topic ? true : undefined}
@@ -120,7 +121,7 @@ export function NewSession({ state, busy, onCreate }: Props) {
               </select>
               <button
                 type="button"
-                className={`btn btn-xs ${agent ? "btn-primary" : ""}`}
+                className={cn("btn btn-xs", agent && "btn-primary")}
                 aria-pressed={agent}
                 onClick={() => setValue("dynamicAgent", !agent, { shouldDirty: true })}
                 title={t("newsession.agent.title")}

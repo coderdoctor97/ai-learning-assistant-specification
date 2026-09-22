@@ -185,6 +185,7 @@ export const en = {
   "stage.state.agentActions": "Agent actions",
   "stage.qa.heading": "Ask about this stage",
   "stage.qa.asked": "{count} asked",
+  "stage.qa.empty": "No questions yet — ask anything about this stage.",
   "stage.qa.you": "You",
   "stage.qa.edit": "✎ Edit",
   "stage.qa.editTitle": "Edit this question and ask again",

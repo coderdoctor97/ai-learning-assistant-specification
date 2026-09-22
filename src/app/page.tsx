@@ -202,11 +202,11 @@ export default function LandingPage() {
       {/* Footer -------------------------------------------------------- */}
       <footer className="site-footer">
         <div className="landing-inner flex flex-wrap items-center gap-x-4 gap-y-2 py-8">
-          <span className="brand brand-footer" aria-label="Learning Studio">
+          <span className="brand brand-footer">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/brand/logo-light.png" alt="" width={384} height={128} className="brand-logo" />
+            <img src="/brand/logo-light.png" alt="Learning Studio" width={384} height={128} className="brand-logo" />
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/brand/logo-dark.png" alt="" width={384} height={128} className="brand-logo brand-logo-dark" />
+            <img src="/brand/logo-dark.png" alt="Learning Studio" width={384} height={128} className="brand-logo brand-logo-dark" />
           </span>
           <span>
             {t("landing.footer.storage")} <span className="font-mono">.data/studio.db</span>

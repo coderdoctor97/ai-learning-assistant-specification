@@ -1,10 +1,20 @@
 "use client";
 
+import { Icon } from "@/components/ui/Icon";
 import { t, formatDateTime } from "@/lib/i18n";
 import type { ResourceRef } from "@/lib/client/api";
 
 export function ResourceList({ resources }: { resources: ResourceRef[] }) {
-  if (!resources.length) return <p className="max-w-prose text-sm leading-relaxed text-muted">{t("stage.sources.empty")}</p>;
+  if (!resources.length) {
+    return (
+      <div className="empty-state" role="status">
+        <span className="empty-state-icon">
+          <Icon name="file" />
+        </span>
+        <p className="max-w-prose text-sm leading-relaxed">{t("stage.sources.empty")}</p>
+      </div>
+    );
+  }
   return (
     <ul className="space-y-2">
       {resources.map((resource) => (

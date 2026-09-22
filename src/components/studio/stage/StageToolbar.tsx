@@ -59,7 +59,7 @@ export function StageToolbar({
   return (
     <div className="studio-header px-4 py-3 sm:px-6 sm:py-3.5">
       <div className="header-meta min-w-0">
-        <h1 className="header-title min-w-0 truncate text-2xl font-semibold tracking-tight sm:whitespace-normal sm:text-3xl" title={session.title}>
+        <h1 className="header-title title-page min-w-0 truncate sm:whitespace-normal" title={session.title}>
           {session.title}
         </h1>
         <span className="chip">{session.configName}</span>

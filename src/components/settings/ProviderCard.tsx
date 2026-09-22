@@ -4,7 +4,9 @@ import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 import { Icon } from "@/components/ui/Icon";
+import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
 import { api, type ProviderRow } from "@/lib/client/api";
 
@@ -69,6 +71,7 @@ export function ProviderCard({
   const watched = useWatch({ control });
   const baseUrl = watched.baseUrl ?? "";
   const apiKey = watched.apiKey ?? "";
+  const [confirmRemove, setConfirmRemove] = useState(false);
 
   function keyDetail(): string {
     if (provider.keySource === "env") return t("settings.provider.keyUsingEnv", { name: provider.apiKeyEnv ?? "" });
@@ -112,7 +115,7 @@ export function ProviderCard({
               data-tone={provider.status === "connected" ? "good" : provider.status === "error" ? "warn" : "muted"}
               aria-hidden="true"
             />
-            <h3 className="text-base font-medium tracking-tight">{provider.name}</h3>
+            <h3 className="title-card">{provider.name}</h3>
             <span className="chip">
               {provider.protocol === "anthropic"
                 ? t("settings.provider.protocolAnthropic")
@@ -125,7 +128,7 @@ export function ProviderCard({
           </div>
           <p className="mt-1.5 max-w-prose text-sm leading-relaxed text-muted">{provider.blurb}</p>
           {provider.statusMessage ? (
-            <p className={`mt-1 text-sm leading-relaxed ${provider.status === "error" ? "text-warn" : "text-muted"}`}>
+            <p className={cn("mt-1 text-sm leading-relaxed", provider.status === "error" ? "text-warn" : "text-muted")}>
               {provider.statusMessage}
             </p>
           ) : null}
@@ -212,18 +215,22 @@ export function ProviderCard({
           {t("settings.provider.use")}
         </button>
         {!provider.builtIn ? (
-          <button
-            type="button"
-            className="btn btn-xs text-warn"
-            onClick={() => {
-              if (window.confirm(t("settings.provider.removeConfirm", { name: provider.name })))
-                void guard(() => api.deleteProvider(provider.id));
-            }}
-          >
+          <button type="button" className="btn btn-xs text-warn" onClick={() => setConfirmRemove(true)}>
             {t("settings.provider.remove")}
           </button>
         ) : null}
       </div>
+
+      <ConfirmSheet
+        open={confirmRemove}
+        onClose={() => setConfirmRemove(false)}
+        title={t("settings.provider.remove")}
+        body={t("settings.provider.removeConfirm", { name: provider.name })}
+        confirmLabel={t("settings.provider.remove")}
+        onConfirm={async () => {
+          await guard(() => api.deleteProvider(provider.id));
+        }}
+      />
     </div>
   );
 }

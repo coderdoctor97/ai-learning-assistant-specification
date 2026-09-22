@@ -12,7 +12,7 @@ export default function Error({
   return (
     <main id="main-content" className="flex min-h-dvh items-center justify-center px-6" tabIndex={-1}>
       <div className="card card-warn w-full max-w-md p-6 text-center">
-        <h1 className="text-warn mb-2 text-lg font-medium tracking-tight">{t("app.error.title")}</h1>
+        <h1 className="title-section text-warn mb-2">{t("app.error.title")}</h1>
         <p className="mb-4 text-sm leading-relaxed text-muted">{error.message || t("app.error.hint")}</p>
         <p className="mb-4 text-sm leading-relaxed text-muted">{t("app.error.hint")}</p>
         <button type="button" className="btn btn-primary" onClick={() => reset()}>

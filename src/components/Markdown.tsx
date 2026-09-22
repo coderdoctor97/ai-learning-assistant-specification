@@ -3,10 +3,11 @@
 import { memo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { cn } from "@/lib/cn";
 
 function MarkdownImpl({ children, className = "" }: { children: string; className?: string }) {
   return (
-    <div className={`prose-study ${className}`}>
+    <div className={cn("prose-study", className)}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{

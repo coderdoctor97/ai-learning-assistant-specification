@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ConfirmSheet, RenameSheet } from "@/components/ui/ConfirmSheet";
 import { Popover, handleMenuItemKeys, usePopover } from "@/components/ui/Popover";
 import { MiniProgressBar } from "@/components/ui/ProgressBar";
 import { Icon } from "@/components/ui/Icon";
@@ -43,10 +44,14 @@ function SessionMenuItems({
   session,
   state,
   act,
+  onRename,
+  onDeleteRequest,
 }: {
   session: SessionSummary;
   state: AppState;
   act: Act;
+  onRename: (session: SessionSummary) => void;
+  onDeleteRequest: (session: SessionSummary) => void;
 }) {
   const { dismiss } = usePopover();
   return (
@@ -71,14 +76,9 @@ function SessionMenuItems({
         type="button"
         role="menuitem"
         className="menu-item"
-        onClick={async () => {
-          const title = window.prompt(t("sidebar.session.renamePrompt"), session.title);
-          if (title?.trim()) {
-            await act(() => api.patchSession(session.id, { title: title.trim() }));
-            dismiss();
-          } else {
-            dismiss();
-          }
+        onClick={() => {
+          dismiss();
+          onRename(session);
         }}
       >
         {t("sidebar.session.rename")}
@@ -108,11 +108,9 @@ function SessionMenuItems({
         role="menuitem"
         className="menu-item"
         data-danger="true"
-        onClick={async () => {
-          if (window.confirm(t("sidebar.session.deleteConfirm", { title: session.title }))) {
-            await act(() => api.deleteSession(session.id), t("sidebar.session.deleted"));
-          }
+        onClick={() => {
           dismiss();
+          onDeleteRequest(session);
         }}
       >
         {t("sidebar.session.delete")}
@@ -125,10 +123,14 @@ function SessionMenu({
   session,
   state,
   act,
+  onRename,
+  onDeleteRequest,
 }: {
   session: SessionSummary;
   state: AppState;
   act: Act;
+  onRename: (session: SessionSummary) => void;
+  onDeleteRequest: (session: SessionSummary) => void;
 }) {
   return (
     <Popover.Root>
@@ -141,7 +143,7 @@ function SessionMenu({
       >
         <Icon name="more" />
       </Popover.Trigger>
-      <SessionMenuItems session={session} state={state} act={act} />
+      <SessionMenuItems session={session} state={state} act={act} onRename={onRename} onDeleteRequest={onDeleteRequest} />
     </Popover.Root>
   );
 }
@@ -152,12 +154,16 @@ function SessionRow({
   activeId,
   onSelect,
   act,
+  onRename,
+  onDeleteRequest,
 }: {
   session: SessionSummary;
   state: AppState;
   activeId: string | null;
   onSelect: (id: string) => void;
   act: Act;
+  onRename: (session: SessionSummary) => void;
+  onDeleteRequest: (session: SessionSummary) => void;
 }) {
   const progress = session.stageCount ? Math.round(((session.currentStage + 1) / session.stageCount) * 100) : 0;
   const done = session.status === "completed";
@@ -184,7 +190,7 @@ function SessionRow({
           <span className="ml-auto">{timeAgo(session.updatedAt)}</span>
         </div>
       </button>
-      <SessionMenu session={session} state={state} act={act} />
+      <SessionMenu session={session} state={state} act={act} onRename={onRename} onDeleteRequest={onDeleteRequest} />
     </div>
   );
 }
@@ -206,6 +212,10 @@ export function Sidebar({
   const [projectFilter, setProjectFilter] = useState<string | null>(null);
   const [creatingProject, setCreatingProject] = useState(false);
   const [projectName, setProjectName] = useState("");
+  /* In-design overlays (replace window.prompt / window.confirm). */
+  const [renameTarget, setRenameTarget] = useState<SessionSummary | null>(null);
+  const [deleteSessionTarget, setDeleteSessionTarget] = useState<SessionSummary | null>(null);
+  const [deleteProjectTarget, setDeleteProjectTarget] = useState<{ id: string; name: string } | null>(null);
   const isMobile = useMediaQuery("(max-width: 767px)");
   const panelRef = useRef<HTMLElement | null>(null);
 
@@ -394,12 +404,7 @@ export function Sidebar({
                   <button
                     type="button"
                     className="icon-btn row-action absolute right-1 top-1"
-                    onClick={async () => {
-                      if (window.confirm(t("sidebar.project.deleteConfirm", { name: project.name }))) {
-                        await act(() => api.deleteProject(project.id));
-                        setProjectFilter(null);
-                      }
-                    }}
+                    onClick={() => setDeleteProjectTarget({ id: project.id, name: project.name })}
                     aria-label={`${t("sidebar.session.delete")}: ${project.name}`}
                   >
                     <Icon name="close" />
@@ -422,6 +427,8 @@ export function Sidebar({
                     activeId={activeId}
                     onSelect={handleSelect}
                     act={act}
+                    onRename={setRenameTarget}
+                    onDeleteRequest={setDeleteSessionTarget}
                   />
                 ))}
               </div>
@@ -440,12 +447,19 @@ export function Sidebar({
                   activeId={activeId}
                   onSelect={handleSelect}
                   act={act}
+                  onRename={setRenameTarget}
+                  onDeleteRequest={setDeleteSessionTarget}
                 />
               ))
             ) : (
-              <p className="px-1 py-4 text-xs leading-relaxed text-muted">
-                {state.sessions.length ? t("sidebar.history.noMatch") : t("sidebar.history.empty")}
-              </p>
+              <div className="empty-state" role="status">
+                <span className="empty-state-icon">
+                  <Icon name={state.sessions.length ? "search" : "study"} />
+                </span>
+                <p className="text-xs leading-relaxed">
+                  {state.sessions.length ? t("sidebar.history.noMatch") : t("sidebar.history.empty")}
+                </p>
+              </div>
             )}
           </div>
         </div>
@@ -468,6 +482,40 @@ export function Sidebar({
           onClick={() => onMobileClose?.()}
         />
       ) : null}
+
+      <RenameSheet
+        open={renameTarget !== null}
+        onClose={() => setRenameTarget(null)}
+        title={t("sidebar.session.renamePrompt")}
+        initial={renameTarget?.title ?? ""}
+        onRename={async (value) => {
+          if (!renameTarget) return;
+          await act(() => api.patchSession(renameTarget.id, { title: value }));
+        }}
+      />
+      <ConfirmSheet
+        open={deleteSessionTarget !== null}
+        onClose={() => setDeleteSessionTarget(null)}
+        title={t("sidebar.session.delete")}
+        body={t("sidebar.session.deleteConfirm", { title: deleteSessionTarget?.title ?? "" })}
+        confirmLabel={t("sidebar.session.delete")}
+        onConfirm={async () => {
+          if (!deleteSessionTarget) return;
+          await act(() => api.deleteSession(deleteSessionTarget.id), t("sidebar.session.deleted"));
+        }}
+      />
+      <ConfirmSheet
+        open={deleteProjectTarget !== null}
+        onClose={() => setDeleteProjectTarget(null)}
+        title={t("sidebar.session.delete")}
+        body={t("sidebar.project.deleteConfirm", { name: deleteProjectTarget?.name ?? "" })}
+        confirmLabel={t("sidebar.session.delete")}
+        onConfirm={async () => {
+          if (!deleteProjectTarget) return;
+          await act(() => api.deleteProject(deleteProjectTarget.id));
+          setProjectFilter(null);
+        }}
+      />
     </>
   );
 }

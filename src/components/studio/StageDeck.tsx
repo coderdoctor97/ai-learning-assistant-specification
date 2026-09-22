@@ -234,9 +234,16 @@ export function StageDeck({
               <div className="grid gap-3 text-sm leading-relaxed sm:grid-cols-2">
                 <div className="min-w-0">
                   <div className="label">{t("stage.state.understanding")}</div>
-                  <p className="mt-1 max-w-prose text-muted">
-                    {session.learningState.understanding || t("stage.state.notAssessed")}
-                  </p>
+                  {session.learningState.understanding ? (
+                    <p className="mt-1 max-w-prose text-muted">{session.learningState.understanding}</p>
+                  ) : (
+                    <p className="mt-1 flex items-center gap-1.5 text-muted">
+                      <span className="empty-state-icon" aria-hidden="true">
+                        <Icon name="study" />
+                      </span>
+                      {t("stage.state.notAssessed")}
+                    </p>
+                  )}
                   {session.learningState.nextFocus ? (
                     <>
                       <div className="label mt-3">{t("stage.state.nextFocus")}</div>
@@ -297,7 +304,7 @@ export function StageDeck({
           {stage ? (
             <section className="qa-section mt-8" aria-label={t("stage.qa.heading")}>
               <div className="mb-3 flex min-w-0 items-center gap-2">
-                <h3 className="text-lg font-medium tracking-tight sm:text-xl">{t("stage.qa.heading")}</h3>
+                <h3 className="title-section">{t("stage.qa.heading")}</h3>
                 <span className="chip font-mono tabular-nums">{t("stage.qa.asked", { count: askedCount })}</span>
               </div>
 

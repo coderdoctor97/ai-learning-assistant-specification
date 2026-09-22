@@ -9,7 +9,7 @@ import {
   type ResourceRef,
   type SessionDetail,
 } from "@/lib/client/api";
-import { Icon } from "@/components/ui/Icon";
+import { ToastStack, useToastStack } from "@/components/ui/ToastStack";
 import { t } from "@/lib/i18n";
 import { applyTheme } from "@/lib/theme";
 import { useMediaQuery } from "@/lib/useMediaQuery";
@@ -68,7 +68,6 @@ export function StudioApp() {
   const [detail, setDetail] = useState<SessionDetail | null>(null);
   const [stageIndex, setStageIndex] = useState(0);
   const [run, setRun] = useState<RunState | null>(null);
-  const [toast, setToast] = useState<{ kind: "error" | "info"; message: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -76,14 +75,11 @@ export function StudioApp() {
   const [creating, setCreating] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMobile = useMediaQuery("(max-width: 767px)");
 
-  const notify = useCallback((kind: "error" | "info", message: string) => {
-    setToast({ kind, message });
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(null), kind === "error" ? 8000 : 3500);
-  }, []);
+  /* Shared feedback stack — same notify(kind, message) contract and the
+     same 8s/3.5s auto-dismiss timings the single toast used. */
+  const { toasts, notify, dismiss: dismissToast } = useToastStack({ error: 8000, info: 3500 });
 
   const refreshState = useCallback(async () => {
     const next = await api.state();
@@ -145,7 +141,6 @@ export function StudioApp() {
   useEffect(
     () => () => {
       if (rafHandle.current !== null) cancelAnimationFrame(rafHandle.current);
-      if (toastTimer.current) clearTimeout(toastTimer.current);
     },
     [],
   );
@@ -479,26 +474,7 @@ export function StudioApp() {
         )}
       </div>
 
-      {toast ? (
-        <div className="toast-layer pointer-events-none fixed inset-x-0 bottom-5 z-50 flex justify-center px-5" role="status" aria-live="polite">
-          <div className="toast card animate-rise pointer-events-auto w-full max-w-lg px-4 py-3 text-sm" data-tone={toast.kind}>
-            <div className="flex items-start gap-3">
-              <span className="toast-icon" aria-hidden="true">
-                {toast.kind === "error" ? <Icon name="warn" /> : <Icon name="check" />}
-              </span>
-              <span className="leading-relaxed">{toast.message}</span>
-              <button
-                type="button"
-                className="icon-btn ml-2"
-                onClick={() => setToast(null)}
-                aria-label={t("studio.toast.dismiss")}
-              >
-                <Icon name="close" />
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </main>
   );
 }
