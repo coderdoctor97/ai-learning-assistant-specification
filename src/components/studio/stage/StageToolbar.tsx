@@ -1,6 +1,7 @@
 "use client";
 
 import { t } from "@/lib/i18n";
+import { Icon } from "@/components/ui/Icon";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import type { SessionDetail } from "@/lib/client/api";
 
@@ -56,16 +57,18 @@ export function StageToolbar({
   }
 
   return (
-    <div className="studio-header px-6 py-3.5">
-      <div className="header-meta">
-        <h1 className="header-title">{session.title}</h1>
+    <div className="studio-header px-4 py-3 sm:px-6 sm:py-3.5">
+      <div className="header-meta min-w-0">
+        <h1 className="header-title min-w-0 truncate text-2xl font-semibold tracking-tight sm:whitespace-normal sm:text-3xl" title={session.title}>
+          {session.title}
+        </h1>
         <span className="chip">{session.configName}</span>
         {session.dynamicAgent ? <span className="chip chip-on">{t("stage.agentChip")}</span> : null}
         {session.status === "completed" ? <span className="chip chip-on">{t("stage.completeChip")}</span> : null}
       </div>
 
       <div
-        className="mt-3 flex items-center gap-1.5 overflow-x-auto pb-1"
+        className="stage-rail mt-3"
         role="group"
         aria-label={t("stage.rail.label")}
         onKeyDown={handleRailKeys}
@@ -90,18 +93,18 @@ export function StageToolbar({
               <span className="step-dot" data-generated={generated} aria-hidden="true">
                 {generated ? "✓" : index + 1}
               </span>
-              <span className="max-w-[9rem] truncate">{entry.title}</span>
+              <span className="step-pill-label">{entry.title}</span>
             </button>
           );
         })}
       </div>
 
-      <div className="mt-2 flex items-center gap-3">
+      <div className="mt-2 flex min-w-0 items-center gap-3">
         <ProgressBar
           ratio={progress}
           label={t("stage.progress", { done: generatedCount, total: steps.length })}
         />
-        <span className="font-mono text-micro text-muted" aria-hidden="true">
+        <span className="font-mono text-micro tabular-nums text-muted" aria-hidden="true">
           {t("stage.progress", { done: generatedCount, total: steps.length })}
         </span>
       </div>

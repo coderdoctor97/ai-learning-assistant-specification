@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Markdown } from "@/components/Markdown";
 import { Collapsible } from "@/components/ui/Collapsible";
+import { Icon } from "@/components/ui/Icon";
 import { t } from "@/lib/i18n";
 import type { Capabilities, SessionDetail } from "@/lib/client/api";
 import { AttachmentRow } from "./stage/AttachmentRow";
@@ -99,13 +100,13 @@ export function StageDeck({
   const promptKey = `${stageIndex}:${step?.title ?? ""}:${step?.instructions ?? ""}`;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       {/* Session header --------------------------------------------------- */}
       <StageToolbar detail={detail} stageIndex={stageIndex} onStageIndex={onStageIndex} busy={busy} />
 
       {/* Stage body ------------------------------------------------------- */}
-      <div ref={bodyRef} className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
-        <div className="mx-auto max-w-3xl">
+      <div ref={bodyRef} className="min-h-0 min-w-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+        <div className="mx-auto w-full min-w-0 max-w-3xl">
           <div key={stageIndex} className="stage-swap">
             <div className="card stage-card" aria-busy={streamingHere}>
               <StageMeta
@@ -118,10 +119,10 @@ export function StageDeck({
                 onGenerate={onGenerate}
               />
 
-              <div className="stage-body sm:p-8">
+              <div className="stage-body min-w-0 sm:p-8">
                 {streamingHere && !run.text ? (
                   <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-xs text-muted" role="status" aria-live="polite">
+                    <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted" role="status" aria-live="polite">
                       <span className="dot-pulse flex gap-1" aria-hidden="true">
                         <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
                         <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
@@ -137,17 +138,19 @@ export function StageDeck({
                 ) : stageBody ? (
                   <>
                     {streamingHere ? (
-                      <div className="mb-3 flex items-center gap-2 text-micro text-muted" role="status" aria-live="polite">
+                      <div className="mb-3 flex items-center gap-2 text-micro uppercase tracking-wide text-muted" role="status" aria-live="polite">
                         <span className="status-dot" aria-hidden="true" />
                         {run.status || t("studio.status.composing")}
                       </div>
                     ) : null}
-                    <Markdown>{stageBody}</Markdown>
+                    <div className="min-w-0 overflow-x-auto">
+                      <Markdown>{stageBody}</Markdown>
+                    </div>
                     {streamingHere ? <span className="caret" /> : null}
                   </>
                 ) : (
                   <div className="py-12 text-center">
-                    <p className="mx-auto max-w-md text-sm leading-relaxed text-muted text-pretty">
+                    <p className="mx-auto max-w-prose text-sm leading-relaxed text-pretty text-muted">
                       {stageIndex === 0 ? t("stage.emptyFirst") : t("stage.emptyRest")}
                     </p>
                     <button
@@ -165,6 +168,7 @@ export function StageDeck({
               {stage && !streamingHere ? (
                 <div className="stage-footer">
                   <button type="button" className="btn btn-xs" onClick={() => copy(stage.content)}>
+                    <Icon name="copy" />
                     {t("stage.copy")}
                   </button>
                   <button
@@ -173,6 +177,7 @@ export function StageDeck({
                     disabled={busy}
                     onClick={() => onGenerate(stageIndex, "none")}
                   >
+                    <Icon name="refresh" />
                     {t("stage.regenerate")}
                   </button>
                   <button
@@ -208,15 +213,15 @@ export function StageDeck({
           </div>
 
           {/* Reasoning + resources ------------------------------------------ */}
-          <div className="mt-3 space-y-2">
+          <div className="mt-4 space-y-2">
             {reasoningEnabled ? (
               <Collapsible title={t("stage.reasoning.title")} tone="accent">
                 {stageReasoning ? (
-                  <pre className="max-h-72 overflow-auto whitespace-pre-wrap text-xs leading-relaxed text-muted">
+                  <pre className="max-h-72 max-w-prose overflow-auto whitespace-pre-wrap text-sm leading-relaxed text-muted">
                     {stageReasoning}
                   </pre>
                 ) : (
-                  <p className="text-xs leading-relaxed text-muted">{t("stage.reasoning.empty")}</p>
+                  <p className="max-w-prose text-sm leading-relaxed text-muted">{t("stage.reasoning.empty")}</p>
                 )}
               </Collapsible>
             ) : null}
@@ -226,20 +231,20 @@ export function StageDeck({
             </Collapsible>
 
             <Collapsible title={t("stage.state.title")} tone="muted">
-              <div className="grid gap-3 text-xs sm:grid-cols-2">
-                <div>
+              <div className="grid gap-3 text-sm leading-relaxed sm:grid-cols-2">
+                <div className="min-w-0">
                   <div className="label">{t("stage.state.understanding")}</div>
-                  <p className="mt-1 text-muted">
+                  <p className="mt-1 max-w-prose text-muted">
                     {session.learningState.understanding || t("stage.state.notAssessed")}
                   </p>
                   {session.learningState.nextFocus ? (
                     <>
                       <div className="label mt-3">{t("stage.state.nextFocus")}</div>
-                      <p className="mt-1 text-muted">{session.learningState.nextFocus}</p>
+                      <p className="mt-1 max-w-prose text-muted">{session.learningState.nextFocus}</p>
                     </>
                   ) : null}
                 </div>
-                <div className="space-y-3">
+                <div className="min-w-0 space-y-3">
                   {(
                     [
                       [t("stage.state.mastered"), session.learningState.mastered],
@@ -290,10 +295,10 @@ export function StageDeck({
 
           {/* Stage Q&A -------------------------------------------------------- */}
           {stage ? (
-            <section className="mt-8" aria-label={t("stage.qa.heading")}>
-              <div className="mb-3 flex items-center gap-2">
-                <h3 className="font-serif text-base tracking-tight">{t("stage.qa.heading")}</h3>
-                <span className="chip">{t("stage.qa.asked", { count: askedCount })}</span>
+            <section className="qa-section mt-8" aria-label={t("stage.qa.heading")}>
+              <div className="mb-3 flex min-w-0 items-center gap-2">
+                <h3 className="text-lg font-medium tracking-tight sm:text-xl">{t("stage.qa.heading")}</h3>
+                <span className="chip font-mono tabular-nums">{t("stage.qa.asked", { count: askedCount })}</span>
               </div>
 
               <div aria-busy={qaStreamingActive(run, stageIndex)}>
@@ -335,16 +340,17 @@ export function StageDeck({
       </div>
 
       {/* Navigation ------------------------------------------------------- */}
-      <div className="nav-bar flex items-center gap-2 px-6 py-3.5">
+      <div className="nav-bar flex min-w-0 items-center gap-2 px-4 py-3 sm:px-6 sm:py-3.5">
         <button
           type="button"
           className="btn"
           disabled={stageIndex === 0 || busy}
           onClick={() => onStageIndex(Math.max(0, stageIndex - 1))}
         >
+          <Icon name="chevronLeft" />
           {t("stage.nav.previous")}
         </button>
-        <div className="mx-auto text-center text-xs text-muted">
+        <div className="stage-nav-title mx-auto min-w-0 truncate text-center text-xs uppercase tracking-wide text-muted" title={step?.title}>
           {step?.title}
           {session.status === "completed" ? t("stage.nav.completeSuffix") : ""}
         </div>
@@ -360,6 +366,7 @@ export function StageDeck({
             }}
           >
             {nextIsGenerated ? t("stage.nav.next") : t("stage.nav.generateNext")}
+            <Icon name="chevronRight" />
           </button>
         ) : (
           <span className="chip chip-on">{t("stage.nav.final")}</span>

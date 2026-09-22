@@ -4,26 +4,31 @@ import { t, formatDateTime } from "@/lib/i18n";
 import type { ResourceRef } from "@/lib/client/api";
 
 export function ResourceList({ resources }: { resources: ResourceRef[] }) {
-  if (!resources.length) return <p className="text-xs text-muted">{t("stage.sources.empty")}</p>;
+  if (!resources.length) return <p className="max-w-prose text-sm leading-relaxed text-muted">{t("stage.sources.empty")}</p>;
   return (
     <ul className="space-y-2">
       {resources.map((resource) => (
-        <li key={resource.id} className="text-xs leading-relaxed">
+        <li key={resource.id} className="min-w-0 text-sm leading-relaxed">
           <a
             href={resource.url}
             target="_blank"
             rel="noreferrer noopener"
             className="font-medium text-accent underline underline-offset-2"
+            title={resource.title}
           >
             {resource.title}
           </a>
-          <div className="text-muted">
+          <div className="font-mono text-micro tabular-nums text-muted">
             {resource.source} · {resource.type}
             {resource.retrievedAt
               ? ` · ${t("stage.sources.retrieved", { date: formatDateTime(resource.retrievedAt) })}`
               : ""}
           </div>
-          {resource.snippet ? <p className="mt-1 line-clamp-3 text-muted">{resource.snippet}</p> : null}
+          {resource.snippet ? (
+            <p className="mt-1 line-clamp-2 max-w-prose text-muted" title={resource.snippet}>
+              {resource.snippet}
+            </p>
+          ) : null}
         </li>
       ))}
     </ul>

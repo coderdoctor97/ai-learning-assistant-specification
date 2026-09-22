@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState, type ReactNode } from "react";
+import { Icon } from "@/components/ui/Icon";
 
 /*
  * Disclosure primitive with full ARIA wiring: the trigger carries
@@ -30,7 +31,7 @@ export function Collapsible({
         onClick={() => setOpen((value) => !value)}
       >
         <span className="fold-chevron" aria-hidden="true">
-          {open ? "▾" : "▸"}
+          <Icon name="chevronDown" className={open ? undefined : "-rotate-90"} />
         </span>
         <span>{title}</span>
         {typeof count === "number" ? <span className="chip ml-auto">{count}</span> : null}

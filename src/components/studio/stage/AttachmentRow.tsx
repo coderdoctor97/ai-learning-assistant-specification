@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { t } from "@/lib/i18n";
+import { Icon } from "@/components/ui/Icon";
 import type { AttachmentRow } from "@/lib/client/api";
 
 type Props = {
@@ -19,11 +20,16 @@ export function AttachmentRow({ attachments, busy, visionAvailable, onUpload, on
 
   return (
     <div className="attach-row mt-3">
+      <label className="sr-only" htmlFor="stage-attach-file">
+        {t("stage.attach.input")}
+      </label>
       <input
+        id="stage-attach-file"
         ref={fileRef}
         type="file"
-        className="hidden"
+        className="sr-only"
         accept=".pdf,.doc,.docx,.md,.markdown,.txt,image/png,image/jpeg,image/webp,image/gif"
+        aria-label={t("stage.attach.input")}
         onChange={async (event) => {
           const file = event.target.files?.[0];
           event.target.value = "";
@@ -37,24 +43,37 @@ export function AttachmentRow({ attachments, busy, visionAvailable, onUpload, on
         disabled={busy}
         aria-busy={busy}
       >
+        <Icon name="paperclip" />
         {t("stage.attach.button")}
       </button>
-      <span className="text-micro text-muted">
+      <span className="text-micro leading-relaxed text-muted">
         {visionAvailable ? t("stage.attach.hintImages") : t("stage.attach.hintNoImages")}
       </span>
-      {attachments.map((attachment) => (
-        <span key={attachment.id} className="chip">
-          <span aria-hidden="true">{attachment.kind === "image" ? "🖼" : "📄"}</span> {attachment.name}
-          <button
-            type="button"
-            className="icon-btn"
-            onClick={() => onDeleteAttachment(attachment.id)}
-            aria-label={t("stage.attach.remove", { name: attachment.name })}
-          >
-            <span aria-hidden="true">×</span>
-          </button>
-        </span>
-      ))}
+      <ul className="attach-list" aria-label={t("stage.attach.list")} aria-live="polite">
+        {attachments.map((attachment) => (
+          <li key={attachment.id} className="attach-chip">
+            <span className="attach-chip-icon" aria-hidden="true">
+              <Icon name={attachment.kind === "image" ? "image" : "file"} />
+            </span>
+            <span className="attach-chip-body">
+              <span className="attach-chip-name" title={attachment.name}>
+                {attachment.name}
+              </span>
+              <span className="attach-chip-meta font-mono tabular-nums">
+                {t("stage.attach.size", { size: Math.max(1, Math.round(attachment.size / 1024)) })}
+              </span>
+            </span>
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={() => onDeleteAttachment(attachment.id)}
+              aria-label={t("stage.attach.remove", { name: attachment.name })}
+            >
+              <Icon name="close" />
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

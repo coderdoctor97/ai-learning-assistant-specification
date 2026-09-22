@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Popover, handleMenuItemKeys, usePopover } from "@/components/ui/Popover";
 import { MiniProgressBar } from "@/components/ui/ProgressBar";
+import { Icon } from "@/components/ui/Icon";
 import { useMediaQuery } from "@/lib/useMediaQuery";
 import { formatDate, t, tPlural } from "@/lib/i18n";
 import { api, type AppState, type SessionSummary } from "@/lib/client/api";
@@ -132,13 +133,13 @@ function SessionMenu({
   return (
     <Popover.Root>
       <Popover.Trigger
-        className="icon-btn absolute right-0.5 top-0.5 z-20 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
+        className="icon-btn row-action absolute right-1 top-1 z-20"
         hasPopup="menu"
         title={t("sidebar.session.actions")}
         aria-label={t("sidebar.session.actions")}
         onClick={(event) => event.stopPropagation()}
       >
-        <span aria-hidden="true">⋯</span>
+        <Icon name="more" />
       </Popover.Trigger>
       <SessionMenuItems session={session} state={state} act={act} />
     </Popover.Root>
@@ -164,20 +165,20 @@ function SessionRow({
     <div className="group relative">
       <button
         type="button"
-        className="sidebar-item"
+        className="sidebar-item sidebar-item-session"
         data-active={session.id === activeId}
         onClick={() => onSelect(session.id)}
         title={session.topic}
       >
         <div className="flex items-center gap-1.5">
           {session.pinned ? (
-            <span className="text-nano text-accent" aria-label={t("sidebar.pinned")}>
-              ★
+            <span className="text-accent" aria-label={t("sidebar.pinned")}>
+              <Icon name="star" />
             </span>
           ) : null}
           <span className="truncate">{session.title}</span>
         </div>
-        <div className="mt-1 flex items-center gap-2 text-micro text-muted">
+        <div className="mt-1 flex items-center gap-2 font-mono text-micro tabular-nums text-muted">
           <MiniProgressBar ratio={(done ? 100 : progress) / 100} />
           <span>{done ? t("sidebar.session.complete") : `${session.currentStage + 1}/${session.stageCount}`}</span>
           <span className="ml-auto">{timeAgo(session.updatedAt)}</span>
@@ -262,7 +263,7 @@ export function Sidebar({
 
   if (showRail) {
     return (
-      <aside className="flex w-14 shrink-0 flex-col items-center gap-3 border-r border-line bg-surface py-4">
+      <aside className="sidebar-rail flex w-14 shrink-0 flex-col items-center gap-3 border-r border-line bg-surface py-4">
         <button
           type="button"
           className="icon-btn"
@@ -271,7 +272,7 @@ export function Sidebar({
           aria-label={t("sidebar.expand")}
           aria-expanded={isMobile ? true : !collapsed}
         >
-          <span aria-hidden="true">☰</span>
+          <Icon name="menu" />
         </button>
         <button
           type="button"
@@ -280,11 +281,11 @@ export function Sidebar({
           title={t("sidebar.newSessionShort")}
           aria-label={t("sidebar.newSessionShort")}
         >
-          <span aria-hidden="true">＋</span>
+          <Icon name="plus" />
         </button>
         <div className="mt-auto">
           <Link href="/settings" className="icon-btn" title={t("sidebar.settings")}>
-            <span aria-hidden="true">⚙</span>
+            <Icon name="settings" />
           </Link>
         </div>
       </aside>
@@ -300,7 +301,7 @@ export function Sidebar({
         tabIndex={-1}
       >
         <div className="flex items-center gap-2 px-3 py-3">
-          <Link href="/" className="brand" aria-label="Learning Studio">
+          <Link href="/" className="brand min-w-0" aria-label="Learning Studio">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/brand/logo-light.png" alt="" width={384} height={128} className="brand-logo brand-logo-sm" />
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -313,13 +314,13 @@ export function Sidebar({
             title={t("sidebar.collapse")}
             aria-label={t("sidebar.collapse")}
           >
-            <span aria-hidden="true">⟨</span>
+            <Icon name="chevronLeft" />
           </button>
         </div>
 
         <div className="space-y-2 px-3 pb-3">
           <button type="button" className="btn btn-primary w-full" onClick={handleNew}>
-            + {t("sidebar.newSession")}
+            <Icon name="plus" /> {t("sidebar.newSession")}
           </button>
           <input
             className="input"
@@ -342,7 +343,7 @@ export function Sidebar({
               aria-label={t("sidebar.projects.add")}
               title={t("sidebar.projects.add")}
             >
-              <span aria-hidden="true">＋</span>
+              <Icon name="plus" />
             </button>
           </div>
           {creatingProject ? (
@@ -369,14 +370,14 @@ export function Sidebar({
               </button>
             </form>
           ) : null}
-          <div className="mb-3 space-y-0.5">
+          <div className="sidebar-section mb-3 space-y-0.5">
             <button
               type="button"
               className="sidebar-item"
               data-active={projectFilter === null}
               onClick={() => setProjectFilter(null)}
             >
-              {t("sidebar.projects.all")} <span className="text-micro text-muted">({state.sessions.length})</span>
+              {t("sidebar.projects.all")} <span className="font-mono text-micro tabular-nums text-muted">({state.sessions.length})</span>
             </button>
             {state.projects.map((project) => {
               const count = state.sessions.filter((session) => session.projectId === project.id).length;
@@ -384,15 +385,15 @@ export function Sidebar({
                 <div key={project.id} className="group relative">
                   <button
                     type="button"
-                    className="sidebar-item"
+                    className="sidebar-item sidebar-item-session"
                     data-active={projectFilter === project.id}
                     onClick={() => setProjectFilter(projectFilter === project.id ? null : project.id)}
                   >
-                    {project.name} <span className="text-micro text-muted">({count})</span>
+                    {project.name} <span className="font-mono text-micro tabular-nums text-muted">({count})</span>
                   </button>
                   <button
                     type="button"
-                    className="icon-btn absolute right-0 top-0.5 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
+                    className="icon-btn row-action absolute right-1 top-1"
                     onClick={async () => {
                       if (window.confirm(t("sidebar.project.deleteConfirm", { name: project.name }))) {
                         await act(() => api.deleteProject(project.id));
@@ -401,7 +402,7 @@ export function Sidebar({
                     }}
                     aria-label={`${t("sidebar.session.delete")}: ${project.name}`}
                   >
-                    <span aria-hidden="true">×</span>
+                    <Icon name="close" />
                   </button>
                 </div>
               );
@@ -410,6 +411,7 @@ export function Sidebar({
 
           {pinned.length ? (
             <>
+              <div className="sidebar-divider" />
               <div className="label mb-1">{t("sidebar.pinned")}</div>
               <div className="mb-3 space-y-0.5">
                 {pinned.map((session) => (
@@ -426,6 +428,7 @@ export function Sidebar({
             </>
           ) : null}
 
+          <div className="sidebar-divider" />
           <div className="label mb-1">{t("sidebar.history")}</div>
           <div className="space-y-0.5">
             {rest.length ? (
@@ -449,9 +452,7 @@ export function Sidebar({
 
         <div className="border-t border-line p-3">
           <Link href="/settings" className="btn w-full justify-start" onClick={() => onMobileClose?.()}>
-            <span className="text-muted" aria-hidden="true">
-              ⚙
-            </span>{" "}
+            <Icon name="settings" className="text-muted" />
             {t("sidebar.settings")}
           </Link>
           <p className="mt-2 px-1 text-micro leading-relaxed text-muted">

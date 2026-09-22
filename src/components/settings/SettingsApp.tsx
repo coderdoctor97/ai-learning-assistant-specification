@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ProviderCard } from "@/components/settings/ProviderCard";
+import { Icon } from "@/components/ui/Icon";
 import { t } from "@/lib/i18n";
 import { applyTheme } from "@/lib/theme";
 import { api, type AppState, type ConfigRow, type LearningStep } from "@/lib/client/api";
@@ -24,7 +25,7 @@ function newStep(): LearningStep {
 /* Initial-load skeleton mirroring the settings geometry. */
 function SettingsSkeleton() {
   return (
-    <div className="mx-auto max-w-5xl px-6 py-8" aria-busy="true" aria-label={t("settings.loading")}>
+    <div className="settings-page mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8" aria-busy="true" aria-label={t("settings.loading")}>
       <div className="flex flex-wrap items-center gap-3">
         <div className="skeleton h-8 w-24" />
         <div className="skeleton h-8 w-32" />
@@ -69,18 +70,22 @@ function MethodologyEditor({
   if (!draft) return null;
   const readOnly = Boolean(config?.builtIn);
   return (
-    <div className="card p-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          className="input max-w-xs"
-          value={draft.name}
-          disabled={readOnly}
-          aria-label={t("settings.methodology.newStep")}
-          onChange={(event) => setDraft({ ...draft, name: event.target.value })}
-        />
-        <span className="chip">{t("settings.methodology.steps", { count: draft.steps.length })}</span>
-        {readOnly ? <span className="chip">{t("settings.methodology.readOnly")}</span> : null}
-        <div className="ml-auto flex gap-1.5">
+    <div className="card methodology-editor min-w-0 p-5">
+      <div className="methodology-editor-head">
+        <div className="min-w-0 flex-1 space-y-2">
+          <input
+            className="input max-w-xs"
+            value={draft.name}
+            disabled={readOnly}
+            aria-label={t("settings.methodology.newStep")}
+            onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+          />
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="chip font-mono tabular-nums">{t("settings.methodology.steps", { count: draft.steps.length })}</span>
+            {readOnly ? <span className="chip">{t("settings.methodology.readOnly")}</span> : null}
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
           {readOnly ? (
             <button
               type="button"
@@ -125,7 +130,7 @@ function MethodologyEditor({
               </button>
               <button
                 type="button"
-                className="btn btn-xs"
+                className="btn btn-xs text-warn"
                 onClick={() => {
                   if (window.confirm(t("settings.methodology.deleteConfirm", { name: draft.name }))) {
                     void guard(async () => {
@@ -144,7 +149,7 @@ function MethodologyEditor({
       </div>
 
       <input
-        className="input mt-2 text-xs"
+        className="input mt-3 text-sm"
         placeholder={t("settings.methodology.descriptionPlaceholder")}
         aria-label={t("settings.methodology.descriptionPlaceholder")}
         disabled={readOnly}
@@ -154,13 +159,13 @@ function MethodologyEditor({
 
       <div className="mt-4 space-y-3">
         {draft.steps.map((step, index) => (
-          <div key={step.id} className="rounded-xl border border-line bg-surface-muted p-3">
-            <div className="flex items-center gap-2">
-              <span className="step-badge" aria-hidden="true">
+          <div key={step.id} className="step-editor">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="step-badge font-mono tabular-nums" aria-hidden="true">
                 {index + 1}
               </span>
               <input
-                className="input text-sm"
+                className="input min-w-0 flex-1 text-sm"
                 value={step.title}
                 disabled={readOnly}
                 aria-label={`${t("settings.methodology.newStep")} ${index + 1}`}
@@ -171,7 +176,7 @@ function MethodologyEditor({
                 }}
               />
               {!readOnly ? (
-                <div className="flex gap-1">
+                <div className="flex shrink-0 gap-1">
                   <button
                     type="button"
                     className="btn btn-ghost btn-xs"
@@ -183,7 +188,7 @@ function MethodologyEditor({
                     }}
                     aria-label={t("settings.methodology.moveUp")}
                   >
-                    ↑
+                    <Icon name="chevronDown" className="rotate-180" />
                   </button>
                   <button
                     type="button"
@@ -196,22 +201,22 @@ function MethodologyEditor({
                     }}
                     aria-label={t("settings.methodology.moveDown")}
                   >
-                    ↓
+                    <Icon name="chevronDown" />
                   </button>
                   <button
                     type="button"
-                    className="btn btn-ghost btn-xs"
+                    className="btn btn-ghost btn-xs text-warn"
                     disabled={draft.steps.length <= 1}
                     onClick={() => setDraft({ ...draft, steps: draft.steps.filter((_, i) => i !== index) })}
                     aria-label={t("settings.methodology.removeStep")}
                   >
-                    ×
+                    <Icon name="close" />
                   </button>
                 </div>
               ) : null}
             </div>
             <textarea
-              className="textarea mt-2 text-xs"
+              className="textarea mt-2 text-sm"
               rows={3}
               disabled={readOnly}
               placeholder={t("settings.methodology.stepPlaceholder")}
@@ -233,6 +238,7 @@ function MethodologyEditor({
           className="btn btn-xs mt-3"
           onClick={() => setDraft({ ...draft, steps: [...draft.steps, newStep()] })}
         >
+          <Icon name="plus" />
           {t("settings.methodology.addStep")}
         </button>
       ) : null}
@@ -318,14 +324,11 @@ export function SettingsApp() {
   if (!state) {
     if (loadError) {
       return (
-        <main id="main-content" className="flex h-screen items-center justify-center px-6" tabIndex={-1}>
-          <a href="#main-content" className="skip-link">
-            {t("app.skipToContent")}
-          </a>
+        <main id="main-content" className="flex min-h-dvh items-center justify-center px-6" tabIndex={-1}>
           <div className="card card-warn w-full max-w-md p-6 text-center">
-            <div className="text-warn mb-2 text-lg">{t("settings.error.title")}</div>
+            <div className="text-warn mb-2 text-lg font-medium tracking-tight">{t("settings.error.title")}</div>
             <p className="mb-4 text-sm leading-relaxed text-muted">{loadError}</p>
-            <p className="mb-4 text-xs leading-relaxed text-muted">{t("settings.error.hint")}</p>
+            <p className="mb-4 text-sm leading-relaxed text-muted">{t("settings.error.hint")}</p>
             <button
               type="button"
               className="btn btn-primary"
@@ -342,9 +345,6 @@ export function SettingsApp() {
     }
     return (
       <main id="main-content" tabIndex={-1}>
-        <a href="#main-content" className="skip-link">
-          {t("app.skipToContent")}
-        </a>
         <SettingsSkeleton />
       </main>
     );
@@ -357,20 +357,18 @@ export function SettingsApp() {
   /* ---------------------------------------------------------------- */
 
   return (
-    <main id="main-content" className="mx-auto max-w-5xl px-6 py-8" tabIndex={-1}>
-      <a href="#main-content" className="skip-link">
-        {t("app.skipToContent")}
-      </a>
-      <div className="flex flex-wrap items-center gap-3">
+    <main id="main-content" className="settings-page mx-auto min-h-dvh min-w-0 max-w-5xl px-4 py-6 sm:px-6 sm:py-8" tabIndex={-1}>
+      <div className="flex min-w-0 flex-wrap items-center gap-3">
         <Link href="/studio" className="btn btn-xs">
+          <Icon name="chevronLeft" />
           {t("settings.back")}
         </Link>
-        <h1 className="font-serif text-2xl">{t("settings.title")}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("settings.title")}</h1>
         <span className="chip">{t("settings.tagline")}</span>
       </div>
 
       <nav
-        className="mt-5 flex flex-wrap gap-1 border-b border-line"
+        className="settings-tabs mt-6"
         role="tablist"
         aria-label={t("settings.title")}
         onKeyDown={handleTabKeys}
@@ -405,7 +403,7 @@ export function SettingsApp() {
             role="tabpanel"
             aria-labelledby="settings-tab-providers"
             tabIndex={0}
-            className="space-y-3"
+            className="space-y-4"
           >
               <h2 className="sr-only">{t("settings.tab.providers")}</h2>
             {state.providers.map((provider) => (
@@ -422,11 +420,11 @@ export function SettingsApp() {
               />
             ))}
 
-            <div className="card p-4">
-              <h3 className="font-medium">{t("settings.provider.custom.title")}</h3>
-              <p className="mt-1 text-xs text-muted">{t("settings.provider.custom.body")}</p>
+            <div className="card min-w-0 p-5">
+              <h3 className="text-lg font-medium tracking-tight sm:text-xl">{t("settings.provider.custom.title")}</h3>
+              <p className="mt-1.5 max-w-prose text-sm leading-relaxed text-muted">{t("settings.provider.custom.body")}</p>
               <form
-                className="mt-3 grid gap-2 sm:grid-cols-3"
+                className="settings-custom-form mt-4"
                 onSubmit={async (event) => {
                   event.preventDefault();
                   if (!customProvider.name.trim() || !customProvider.baseUrl.trim()) return;
@@ -441,35 +439,45 @@ export function SettingsApp() {
                   }, t("settings.provider.custom.added"));
                 }}
               >
-                <input
-                  className="input text-xs"
-                  placeholder={t("settings.provider.custom.name")}
-                  aria-label={t("settings.provider.custom.name")}
-                  value={customProvider.name}
-                  onChange={(event) => setCustomProvider({ ...customProvider, name: event.target.value })}
-                />
-                <input
-                  className="input text-xs"
-                  type="url"
-                  placeholder={t("settings.provider.custom.baseUrl")}
-                  aria-label={t("settings.provider.custom.baseUrl")}
-                  value={customProvider.baseUrl}
-                  onChange={(event) => setCustomProvider({ ...customProvider, baseUrl: event.target.value })}
-                />
-                <div className="flex gap-1.5">
+                <label className="block min-w-0">
+                  <span className="label">{t("settings.provider.custom.name")}</span>
                   <input
-                    className="input text-xs"
+                    className="input mt-1"
+                    placeholder={t("settings.provider.custom.name")}
+                    aria-label={t("settings.provider.custom.name")}
+                    value={customProvider.name}
+                    onChange={(event) => setCustomProvider({ ...customProvider, name: event.target.value })}
+                  />
+                </label>
+                <label className="block min-w-0">
+                  <span className="label">{t("settings.provider.baseUrl")}</span>
+                  <input
+                    className="input mt-1"
+                    type="url"
+                    placeholder={t("settings.provider.custom.baseUrl")}
+                    aria-label={t("settings.provider.custom.baseUrl")}
+                    value={customProvider.baseUrl}
+                    onChange={(event) => setCustomProvider({ ...customProvider, baseUrl: event.target.value })}
+                  />
+                </label>
+                <label className="block min-w-0 sm:col-span-2">
+                  <span className="label">{t("settings.provider.custom.apiKey")}</span>
+                  <input
+                    className="input mt-1"
                     type="password"
                     placeholder={t("settings.provider.custom.apiKey")}
                     aria-label={t("settings.provider.custom.apiKey")}
                     value={customProvider.apiKey}
                     onChange={(event) => setCustomProvider({ ...customProvider, apiKey: event.target.value })}
                   />
+                </label>
+                <div className="flex min-w-0 flex-wrap gap-2 sm:col-span-2">
                   <button
-                    className="btn btn-xs"
+                    className="btn btn-primary"
                     type="submit"
                     disabled={!customProvider.name.trim() || !customProvider.baseUrl.trim()}
                   >
+                    <Icon name="plus" />
                     {t("settings.provider.custom.add")}
                   </button>
                 </div>
@@ -484,10 +492,10 @@ export function SettingsApp() {
             role="tabpanel"
             aria-labelledby="settings-tab-methodologies"
             tabIndex={0}
-            className="grid gap-4 md:grid-cols-[16rem_1fr]"
+            className="settings-split"
           >
               <h2 className="sr-only">{t("settings.tab.methodologies")}</h2>
-            <div className="space-y-1">
+            <div className="methodology-nav space-y-1">
               {state.configs.map((config) => (
                 <button
                   key={config.id}
@@ -499,13 +507,13 @@ export function SettingsApp() {
                     setDraft({ name: config.name, description: config.description, steps: config.steps });
                   }}
                 >
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex min-w-0 items-center gap-1.5">
                     <span className="truncate">{config.name}</span>
                     {settings.activeConfigId === config.id ? (
                       <span className="chip chip-on">default</span>
                     ) : null}
                   </div>
-                  <span className="text-micro text-muted">
+                  <span className="font-mono text-micro tabular-nums text-muted">
                     {t("settings.methodology.steps", { count: config.steps.length })}
                   </span>
                 </button>
@@ -533,6 +541,7 @@ export function SettingsApp() {
                   })
                 }
               >
+                <Icon name="plus" />
                 {t("settings.methodology.create")}
               </button>
               {editorId ? (
@@ -554,7 +563,7 @@ export function SettingsApp() {
                 guard={guard}
               />
             ) : (
-              <div className="card flex items-center justify-center p-10 text-sm text-muted">
+              <div className="card flex min-h-48 items-center justify-center p-10 text-center text-sm leading-relaxed text-muted">
                 {t("settings.methodology.empty")}
               </div>
             )}
@@ -567,12 +576,12 @@ export function SettingsApp() {
             role="tabpanel"
             aria-labelledby="settings-tab-learner"
             tabIndex={0}
-            className="grid gap-4 md:grid-cols-2"
+            className="grid min-w-0 gap-4 md:grid-cols-2"
           >
               <h2 className="sr-only">{t("settings.tab.learner")}</h2>
-            <div className="card p-4">
-              <h3 className="font-medium">{t("settings.learner.title")}</h3>
-              <p className="mt-1 text-xs text-muted">{t("settings.learner.body")}</p>
+            <div className="card min-w-0 p-5">
+              <h3 className="text-lg font-medium tracking-tight sm:text-xl">{t("settings.learner.title")}</h3>
+              <p className="mt-1.5 max-w-prose text-sm leading-relaxed text-muted">{t("settings.learner.body")}</p>
               {(
                 [
                   ["level", t("settings.learner.level"), t("settings.learner.levelPlaceholder")],
@@ -581,10 +590,10 @@ export function SettingsApp() {
                   ["preferences", t("settings.learner.preferences"), t("settings.learner.preferencesPlaceholder")],
                 ] as const
               ).map(([key, label, placeholder]) => (
-                <label key={key} className="mt-3 block">
+                <label key={key} className="mt-3 block min-w-0">
                   <span className="label">{label}</span>
                   <textarea
-                    className="textarea mt-1 min-h-[3rem] text-xs"
+                    className="textarea mt-1 min-h-12 text-sm"
                     rows={2}
                     placeholder={placeholder}
                     defaultValue={settings.learnerProfile?.[key] ?? ""}
@@ -600,12 +609,12 @@ export function SettingsApp() {
               ))}
             </div>
 
-            <div className="card space-y-4 p-4">
-              <h3 className="font-medium">{t("settings.generation.title")}</h3>
-              <label className="block">
+            <div className="card min-w-0 space-y-4 p-5">
+              <h3 className="text-lg font-medium tracking-tight sm:text-xl">{t("settings.generation.title")}</h3>
+              <label className="block min-w-0">
                 <span className="label">{t("settings.generation.context")}</span>
                 <select
-                  className="select mt-1 text-xs"
+                  className="select mt-1 text-sm"
                   value={settings.contextLevel}
                   onChange={(event) => guard(() => api.patchSettings({ contextLevel: event.target.value }))}
                 >
@@ -615,15 +624,15 @@ export function SettingsApp() {
                     </option>
                   ))}
                 </select>
-                <span className="mt-1 block text-micro text-muted">
+                <span className="mt-1 block text-micro leading-relaxed text-muted">
                   {t("settings.generation.contextHint")}
                 </span>
               </label>
 
-              <label className="block">
+              <label className="block min-w-0">
                 <span className="label">{t("settings.generation.maxTokens")}</span>
                 <input
-                  className="input mt-1 text-xs"
+                  className="input mt-1 font-mono tabular-nums"
                   type="number"
                   min={256}
                   step={128}
@@ -632,10 +641,10 @@ export function SettingsApp() {
                 />
               </label>
 
-              <label className="block">
-                <span className="label">{t("settings.generation.temperature", { value: settings.temperature.toFixed(2) })}</span>
+              <label className="block min-w-0">
+                <span className="label font-mono tabular-nums">{t("settings.generation.temperature", { value: settings.temperature.toFixed(2) })}</span>
                 <input
-                  className="mt-2 w-full"
+                  className="settings-range mt-2 w-full"
                   type="range"
                   min={0}
                   max={1.2}
@@ -658,7 +667,7 @@ export function SettingsApp() {
                   ["reasoningEnabled", t("settings.generation.reasoning"), t("settings.generation.reasoningHint")],
                 ] as const
               ).map(([key, label, hint]) => (
-                <label key={key} className="flex items-start gap-2 text-xs">
+                <label key={key} className="flex items-start gap-2 text-sm leading-relaxed">
                   <input
                     type="checkbox"
                     className="mt-0.5"
@@ -667,7 +676,7 @@ export function SettingsApp() {
                   />
                   <span>
                     <span className="font-medium">{label}</span>
-                    <span className="block text-muted">{hint}</span>
+                    <span className="mt-0.5 block text-muted">{hint}</span>
                   </span>
                 </label>
               ))}
@@ -681,15 +690,15 @@ export function SettingsApp() {
             role="tabpanel"
             aria-labelledby="settings-tab-skills"
             tabIndex={0}
-            className="space-y-3"
+            className="space-y-4"
           >
               <h2 className="sr-only">{t("settings.tab.skills")}</h2>
-            <div className="card p-4">
-              <h3 className="font-medium">{t("settings.skills.importTitle")}</h3>
-              <p className="mt-1 text-xs leading-relaxed text-muted">{t("settings.skills.importBody")}</p>
-              <div className="mt-3 flex flex-wrap gap-2">
+            <div className="card min-w-0 p-5">
+              <h3 className="text-lg font-medium tracking-tight sm:text-xl">{t("settings.skills.importTitle")}</h3>
+              <p className="mt-1.5 max-w-prose text-sm leading-relaxed text-muted">{t("settings.skills.importBody")}</p>
+              <div className="mt-3 flex min-w-0 flex-wrap gap-2">
                 <input
-                  className="input text-xs sm:max-w-md"
+                  className="input min-w-0 text-sm sm:max-w-md"
                   placeholder={t("settings.skills.urlPlaceholder")}
                   aria-label={t("settings.skills.urlPlaceholder")}
                   value={skillUrl}
@@ -727,8 +736,8 @@ export function SettingsApp() {
               </div>
               {skillPreview ? (
                 <div className="mt-3 rounded-xl border border-line bg-surface-muted p-3">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-sm">{skillPreview.name}</span>
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <span className="text-sm font-medium">{skillPreview.name}</span>
                     <span className="chip">{skillPreview.sourceFile.split("/").pop()}</span>
                   </div>
                   <pre className="mt-2 max-h-52 overflow-auto whitespace-pre-wrap text-micro leading-relaxed text-muted">
@@ -739,16 +748,16 @@ export function SettingsApp() {
             </div>
 
             {state.skills.map((skill) => (
-              <div key={skill.id} className="card p-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h4 className="font-medium">{skill.name}</h4>
+              <div key={skill.id} className="card min-w-0 p-5">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <h4 className="text-base font-medium tracking-tight">{skill.name}</h4>
                   <span className={`chip ${skill.enabled ? "chip-on" : ""}`}>
                     {skill.enabled ? t("settings.skills.active") : t("settings.skills.inactive")}
                   </span>
                   <a className="chip hover:border-accent" href={skill.repoUrl} target="_blank" rel="noreferrer">
                     {t("settings.skills.source")}
                   </a>
-                  <div className="ml-auto flex gap-1.5">
+                  <div className="ml-auto flex flex-wrap gap-1.5">
                     <button
                       type="button"
                       className="btn btn-xs"
@@ -756,15 +765,15 @@ export function SettingsApp() {
                     >
                       {skill.enabled ? t("settings.skills.disable") : t("settings.skills.enable")}
                     </button>
-                    <button type="button" className="btn btn-xs" onClick={() => guard(() => api.deleteSkill(skill.id))}>
+                    <button type="button" className="btn btn-xs text-warn" onClick={() => guard(() => api.deleteSkill(skill.id))}>
                       {t("settings.skills.remove")}
                     </button>
                   </div>
                 </div>
-                <p className="mt-1 text-xs text-muted">{skill.description}</p>
+                <p className="mt-1 max-w-prose text-sm leading-relaxed text-muted">{skill.description}</p>
               </div>
             ))}
-            {!state.skills.length ? <p className="px-1 text-xs text-muted">{t("settings.skills.empty")}</p> : null}
+            {!state.skills.length ? <p className="px-1 text-sm leading-relaxed text-muted">{t("settings.skills.empty")}</p> : null}
           </div>
         ) : null}
 
@@ -774,11 +783,11 @@ export function SettingsApp() {
             role="tabpanel"
             aria-labelledby="settings-tab-data"
             tabIndex={0}
-            className="card p-5"
+            className="card min-w-0 p-5"
           >
               <h2 className="sr-only">{t("settings.tab.data")}</h2>
-            <h3 className="font-medium">{t("settings.data.title")}</h3>
-            <p className="mt-1 text-xs leading-relaxed text-muted">{t("settings.data.body")}</p>
+            <h3 className="text-lg font-medium tracking-tight sm:text-xl">{t("settings.data.title")}</h3>
+            <p className="mt-1.5 max-w-prose text-sm leading-relaxed text-muted">{t("settings.data.body")}</p>
             <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
               {[
                 [t("settings.data.projects"), state.projects.length],
@@ -786,9 +795,9 @@ export function SettingsApp() {
                 [t("settings.data.methodologies"), state.configs.length],
                 [t("settings.data.models"), state.models.length],
               ].map(([label, value]) => (
-                <div key={String(label)}>
+                <div key={String(label)} className="min-w-0">
                   <dt className="label">{label}</dt>
-                  <dd className="font-serif text-2xl">{value}</dd>
+                  <dd className="font-mono text-2xl font-semibold tabular-nums tracking-tight">{value}</dd>
                 </div>
               ))}
             </dl>
@@ -797,13 +806,23 @@ export function SettingsApp() {
       </div>
 
       {toast ? (
-        <div
-          className="toast animate-rise fixed bottom-5 left-1/2 z-50 max-w-lg -translate-x-1/2 px-4 py-2.5 text-sm"
-          data-tone={toast.kind}
-          role="status"
-          aria-live="polite"
-        >
-          {toast.message}
+        <div className="toast-layer pointer-events-none fixed inset-x-0 bottom-5 z-50 flex justify-center px-5" role="status" aria-live="polite">
+          <div className="toast card animate-rise pointer-events-auto w-full max-w-lg px-4 py-3 text-sm" data-tone={toast.kind}>
+            <div className="flex items-start gap-3">
+              <span className="toast-icon" aria-hidden="true">
+                {toast.kind === "error" ? <Icon name="warn" /> : <Icon name="check" />}
+              </span>
+              <span className="leading-relaxed">{toast.message}</span>
+              <button
+                type="button"
+                className="icon-btn ml-2"
+                onClick={() => setToast(null)}
+                aria-label={t("studio.toast.dismiss")}
+              >
+                <Icon name="close" />
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
     </main>

@@ -1,6 +1,7 @@
 "use client";
 
 import { t } from "@/lib/i18n";
+import { Icon } from "@/components/ui/Icon";
 
 type Props = {
   value: string;
@@ -39,6 +40,7 @@ export function Composer({ value, onValueChange, busy, placeholder, onSubmit }: 
           disabled={busy || !value.trim()}
           aria-busy={busy}
         >
+          <Icon name="send" />
           {t("stage.qa.send")}
         </button>
       </div>
@@ -56,7 +58,7 @@ export function ComposerForm({
 }: Props) {
   return (
     <form
-      className="mt-3"
+      className="composer-form mt-3"
       onSubmit={async (event) => {
         event.preventDefault();
         const trimmed = value.trim();

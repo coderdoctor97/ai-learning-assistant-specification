@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Popover, handleMenuItemKeys, usePopover } from "@/components/ui/Popover";
+import { Icon } from "@/components/ui/Icon";
 import { t, type MessageKey } from "@/lib/i18n";
 import type { AppState, Capabilities, ModelRow, ProviderRow, SessionRow } from "@/lib/client/api";
 
@@ -18,10 +19,10 @@ type Props = {
   onDiscover: (providerId: string) => Promise<void>;
 };
 
-const THEMES: { key: "light" | "dark" | "editorial"; glyph: string; labelKey: MessageKey }[] = [
-  { key: "light", glyph: "☀", labelKey: "topbar.theme.light" },
-  { key: "dark", glyph: "☾", labelKey: "topbar.theme.dark" },
-  { key: "editorial", glyph: "◑", labelKey: "topbar.theme.editorial" },
+const THEMES: { key: "light" | "dark" | "editorial"; icon: "sun" | "moon" | "study"; labelKey: MessageKey }[] = [
+  { key: "light", icon: "sun", labelKey: "topbar.theme.light" },
+  { key: "dark", icon: "moon", labelKey: "topbar.theme.dark" },
+  { key: "editorial", icon: "study", labelKey: "topbar.theme.editorial" },
 ];
 
 const CAPABILITY_KEYS: [keyof Capabilities, MessageKey][] = [
@@ -54,6 +55,32 @@ function CapabilityChips({ capabilities }: { capabilities: Capabilities }) {
         );
       })}
     </div>
+  );
+}
+
+function CapabilitySummary({ capabilities }: { capabilities: Capabilities }) {
+  const supportedCount = CAPABILITY_KEYS.filter(([key]) => capabilities[key]).length;
+  return (
+    <Popover.Root>
+      <Popover.Trigger
+        className="btn btn-xs lg:hidden"
+        hasPopup="dialog"
+        title={t("topbar.capability.groupLabel")}
+        aria-label={t("topbar.capability.summary", { on: supportedCount, total: CAPABILITY_KEYS.length })}
+      >
+        <span className="font-mono tabular-nums">
+          {t("topbar.capability.summary", { on: supportedCount, total: CAPABILITY_KEYS.length })}
+        </span>
+      </Popover.Trigger>
+      <Popover.Content
+        className="popover-surface card right-0 top-full z-30 mt-1 w-56 p-3"
+        role="dialog"
+        ariaLabel={t("topbar.capability.groupLabel")}
+      >
+        <div className="label mb-2">{t("topbar.capability.groupLabel")}</div>
+        <CapabilityChips capabilities={capabilities} />
+      </Popover.Content>
+    </Popover.Root>
   );
 }
 
@@ -96,7 +123,7 @@ function ModelList({
 
   return (
     <div
-      className="mt-2 max-h-[22rem] overflow-y-auto"
+      className="model-picker-list mt-2 overflow-y-auto"
       role="listbox"
       aria-label={t("topbar.model.select")}
       onKeyDown={handleMenuItemKeys}
@@ -126,7 +153,7 @@ function ModelList({
               <span className="truncate font-medium">{model.displayName}</span>
               {model.isFree ? <span className="chip chip-on">{t("topbar.model.free")}</span> : null}
             </div>
-            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-micro text-muted">
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 font-mono text-micro tabular-nums text-muted">
               <span>{provider?.name ?? t("topbar.model.providerFallback")}</span>
               <span>
                 · {(model.contextLength / 1000).toFixed(0)}k {t("topbar.model.contextSuffix")}
@@ -197,138 +224,142 @@ export function TopBar({
   }
 
   return (
-    <header
-      className="z-20 flex flex-wrap items-center gap-2 border-b border-line bg-surface px-4 py-2.5"
-      aria-label="Studio controls"
-    >
-      <Link
-        href="/settings"
-        className="flex items-center gap-2 rounded-lg border border-line px-2.5 py-1.5 text-xs transition hover:border-accent"
-        title={activeProvider?.statusMessage ?? t("topbar.provider.statusTitle")}
-      >
-        <span className="status-led" data-tone={statusTone} aria-hidden="true" />
-        <span className="font-medium">{activeProvider?.name ?? t("topbar.provider.none")}</span>
-        <span className="text-muted">
-          {activeProvider
-            ? activeProvider.status === "connected"
-              ? t("topbar.provider.connected")
-              : activeProvider.status
-            : t("topbar.provider.notSet")}
-        </span>
-      </Link>
-
-      {/* Model picker — listbox popover ---------------------------------- */}
-      <Popover.Root>
-        <Popover.Trigger
-          className="btn"
-          hasPopup="listbox"
-          disabled={busy}
-          onKeyDown={(event) => {
-            // ArrowDown/ArrowUp open the listbox and move the cursor into it.
-            if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-              event.preventDefault();
-              if (event.currentTarget.getAttribute("aria-expanded") === "false") {
-                event.currentTarget.click();
-                setCursorFocusSignal((tick) => tick + 1);
-              }
-            }
-          }}
+    <header className="studio-header studio-topbar z-20" aria-label="Studio controls">
+      <div className="studio-topbar-primary">
+        <Link
+          href="/settings"
+          className="provider-chip"
+          title={activeProvider?.statusMessage ?? t("topbar.provider.statusTitle")}
         >
-          <span className="max-w-[15rem] truncate">
-            {activeModel ? activeModel.displayName : state.settings.activeModelId ?? t("topbar.model.select")}
+          <span className="status-led" data-tone={statusTone} aria-hidden="true" />
+          <span className="truncate font-medium">{activeProvider?.name ?? t("topbar.provider.none")}</span>
+          <span className="hidden text-micro text-muted sm:inline">
+            {activeProvider
+              ? activeProvider.status === "connected"
+                ? t("topbar.provider.connected")
+                : activeProvider.status
+              : t("topbar.provider.notSet")}
           </span>
-          <span className="text-muted" aria-hidden="true">
-            ▾
-          </span>
-        </Popover.Trigger>
-        <Popover.Content className="popover-surface card left-0 top-11 w-[26rem] max-w-[90vw] p-3">
-          <div className="flex items-center gap-2">
-            <input
-              className="input"
-              autoFocus
-              placeholder={t("topbar.model.search")}
-              aria-label={t("topbar.model.search")}
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-            <label className="flex items-center gap-1 whitespace-nowrap text-xs text-muted">
-              <input type="checkbox" checked={freeOnly} onChange={(event) => setFreeOnly(event.target.checked)} />
-              {t("topbar.model.free")}
-            </label>
-          </div>
+        </Link>
 
-          <div className="mt-2 flex flex-wrap items-center gap-1">
-            {connectedProviders.map((provider) => (
-              <button
-                key={provider.id}
-                type="button"
-                className="chip hover:border-accent"
-                disabled={discovering !== null}
-                aria-busy={discovering === provider.id}
-                onClick={() => refreshProvider(provider.id)}
-                title={t("topbar.model.refreshTitle", { name: provider.name })}
-              >
-                ⟳ {provider.name}
-              </button>
-            ))}
-            <Link href="/settings" className="chip hover:border-accent">
-              {t("topbar.model.addProvider")}
-            </Link>
-          </div>
+        {/* Model picker — listbox popover ---------------------------------- */}
+        <div className="relative min-w-0">
+          <Popover.Root>
+            <Popover.Trigger
+              className="btn btn-xs"
+              hasPopup="listbox"
+              disabled={busy}
+              onKeyDown={(event) => {
+                // ArrowDown/ArrowUp open the listbox and move the cursor into it.
+                if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                  event.preventDefault();
+                  if (event.currentTarget.getAttribute("aria-expanded") === "false") {
+                    event.currentTarget.click();
+                    setCursorFocusSignal((tick) => tick + 1);
+                  }
+                }
+              }}
+            >
+              <span className="model-picker-label truncate">
+                {activeModel ? activeModel.displayName : state.settings.activeModelId ?? t("topbar.model.select")}
+              </span>
+              <Icon name="chevronDown" className="text-muted" />
+            </Popover.Trigger>
+            <Popover.Content className="popover-surface card model-picker-panel left-0 top-full mt-1 p-3">
+              <div className="flex items-center gap-2">
+                <input
+                  className="input"
+                  autoFocus
+                  placeholder={t("topbar.model.search")}
+                  aria-label={t("topbar.model.search")}
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                />
+                <label className="flex items-center gap-1 whitespace-nowrap text-xs text-muted">
+                  <input type="checkbox" checked={freeOnly} onChange={(event) => setFreeOnly(event.target.checked)} />
+                  {t("topbar.model.free")}
+                </label>
+              </div>
 
-          <ModelList models={models} state={state} onSelect={selectModel} focusCursorSignal={cursorFocusSignal} />
-        </Popover.Content>
-      </Popover.Root>
+              <div className="mt-2 flex flex-wrap items-center gap-1">
+                {connectedProviders.map((provider) => (
+                  <button
+                    key={provider.id}
+                    type="button"
+                    className="chip hover:border-accent"
+                    disabled={discovering !== null}
+                    aria-busy={discovering === provider.id}
+                    onClick={() => refreshProvider(provider.id)}
+                    title={t("topbar.model.refreshTitle", { name: provider.name })}
+                  >
+                    <Icon name="refresh" /> {provider.name}
+                  </button>
+                ))}
+                <Link href="/settings" className="chip hover:border-accent">
+                  {t("topbar.model.addProvider")}
+                </Link>
+              </div>
 
-      <select
-        className="select w-auto text-xs"
-        value={state.settings.contextLevel}
-        onChange={(event) => onPatchSettings({ contextLevel: event.target.value })}
-        title={t("topbar.context.title")}
-        aria-label={t("topbar.context.title")}
-      >
-        {state.contextLevels.map((level) => (
-          <option key={level.key} value={level.key}>
-            {t("topbar.context.label", { label: level.label })}
-          </option>
-        ))}
-      </select>
-      {contextClamped ? (
-        <span
-          className="chip chip-warn"
-          title={t("topbar.context.clampedTitle", {
-            limit: (activeModel!.contextLength / 1000).toFixed(0),
-          })}
+              <ModelList models={models} state={state} onSelect={selectModel} focusCursorSignal={cursorFocusSignal} />
+            </Popover.Content>
+          </Popover.Root>
+        </div>
+
+        <select
+          className="select w-auto text-xs"
+          value={state.settings.contextLevel}
+          onChange={(event) => onPatchSettings({ contextLevel: event.target.value })}
+          title={t("topbar.context.title")}
+          aria-label={t("topbar.context.title")}
         >
-          {t("topbar.context.clamped", { limit: (activeModel!.contextLength / 1000).toFixed(0) })}
-        </span>
-      ) : null}
+          {state.contextLevels.map((level) => (
+            <option key={level.key} value={level.key}>
+              {t("topbar.context.label", { label: level.label })}
+            </option>
+          ))}
+        </select>
+        {contextClamped ? (
+          <span
+            className="chip chip-warn"
+            title={t("topbar.context.clampedTitle", {
+              limit: (activeModel!.contextLength / 1000).toFixed(0),
+            })}
+          >
+            {t("topbar.context.clamped", { limit: (activeModel!.contextLength / 1000).toFixed(0) })}
+          </span>
+        ) : null}
 
-      <button
-        type="button"
-        className={`btn ${agentOn ? "btn-primary" : ""}`}
-        aria-pressed={agentOn}
-        onClick={() =>
-          session ? onPatchSession({ dynamicAgent: !agentOn }) : onPatchSettings({ dynamicAgent: !agentOn })
-        }
-        title={t("topbar.agent.title")}
-      >
-        {t("topbar.agent.label", { state: agentOn ? t("topbar.agent.on") : t("topbar.agent.off") })}
-      </button>
+        <button
+          type="button"
+          className={`btn btn-xs ${agentOn ? "btn-primary" : ""}`}
+          aria-pressed={agentOn}
+          onClick={() =>
+            session ? onPatchSession({ dynamicAgent: !agentOn }) : onPatchSettings({ dynamicAgent: !agentOn })
+          }
+          title={t("topbar.agent.title")}
+        >
+          {t("topbar.agent.label", { state: agentOn ? t("topbar.agent.on") : t("topbar.agent.off") })}
+        </button>
 
-      <button
-        type="button"
-        className={`btn ${state.settings.reasoningEnabled && capabilities.reasoning ? "btn-primary" : ""}`}
-        aria-pressed={state.settings.reasoningEnabled && capabilities.reasoning}
-        disabled={!capabilities.reasoning}
-        onClick={() => onPatchSettings({ reasoningEnabled: !state.settings.reasoningEnabled })}
-        title={capabilities.reasoning ? t("topbar.reasoning.titleOn") : t("topbar.reasoning.titleOff")}
-      >
-        {t("topbar.reasoning.label")}
-      </button>
+        <button
+          type="button"
+          className={`btn btn-xs ${state.settings.reasoningEnabled && capabilities.reasoning ? "btn-primary" : ""}`}
+          aria-pressed={state.settings.reasoningEnabled && capabilities.reasoning}
+          disabled={!capabilities.reasoning}
+          onClick={() => onPatchSettings({ reasoningEnabled: !state.settings.reasoningEnabled })}
+          title={capabilities.reasoning ? t("topbar.reasoning.titleOn") : t("topbar.reasoning.titleOff")}
+        >
+          {t("topbar.reasoning.label")}
+        </button>
+      </div>
 
-      <div className="ml-auto flex items-center gap-3">
-        <CapabilityChips capabilities={capabilities} />
+      <div className="studio-topbar-meta">
+        <div className="hidden lg:block">
+          <CapabilityChips capabilities={capabilities} />
+        </div>
+        <div className="relative lg:hidden">
+          <CapabilitySummary capabilities={capabilities} />
+        </div>
         <div className="theme-switch" role="radiogroup" aria-label={t("topbar.theme.groupLabel")}>
           {THEMES.map((theme) => (
             <button
@@ -342,7 +373,7 @@ export function TopBar({
               title={t("topbar.theme.title", { name: t(theme.labelKey) })}
               aria-label={t("topbar.theme.title", { name: t(theme.labelKey) })}
             >
-              <span aria-hidden="true">{theme.glyph}</span>
+              <Icon name={theme.icon} />
             </button>
           ))}
         </div>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { t } from "@/lib/i18n";
+import { Icon } from "@/components/ui/Icon";
 import type { LearningStep } from "@/lib/client/api";
 
 type Props = {
@@ -29,7 +30,9 @@ export function StageMeta({ step, stageIndex, stepsTotal, busy, onEditStep, onGe
     <>
       <div className="stage-toolbar">
         <span className="label">{t("stage.label", { index: stageIndex + 1, total: stepsTotal })}</span>
-        <h2 className="font-serif text-base tracking-tight">{step?.title}</h2>
+        <h2 className="min-w-0 truncate text-lg font-medium tracking-tight sm:text-xl" title={step?.title}>
+          {step?.title}
+        </h2>
         <div className="ml-auto flex items-center gap-1">
           <button
             type="button"
@@ -38,13 +41,14 @@ export function StageMeta({ step, stageIndex, stepsTotal, busy, onEditStep, onGe
             onClick={() => setEditing((value) => !value)}
             disabled={busy}
           >
+            <Icon name="pencil" />
             {t("stage.editPrompt")}
           </button>
         </div>
       </div>
 
       {editing ? (
-        <div className="space-y-2 border-b border-line bg-surface-muted px-5 py-3.5">
+        <div className="stage-editor">
           <label className="label block" htmlFor={`step-title-${stageIndex}`}>
             {t("stage.editTitle")}
           </label>
@@ -54,8 +58,8 @@ export function StageMeta({ step, stageIndex, stepsTotal, busy, onEditStep, onGe
             value={draftTitle}
             onChange={(event) => setDraftTitle(event.target.value)}
           />
-          <label className="label sr-only" htmlFor={`step-instructions-${stageIndex}`}>
-            {t("stage.editTitle")}
+          <label className="label block" htmlFor={`step-instructions-${stageIndex}`}>
+            {t("stage.editInstructions")}
           </label>
           <textarea
             id={`step-instructions-${stageIndex}`}
@@ -64,7 +68,7 @@ export function StageMeta({ step, stageIndex, stepsTotal, busy, onEditStep, onGe
             value={draftInstructions}
             onChange={(event) => setDraftInstructions(event.target.value)}
           />
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
               className="btn btn-primary btn-xs"

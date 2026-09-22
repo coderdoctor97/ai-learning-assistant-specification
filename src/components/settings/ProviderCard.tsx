@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { Icon } from "@/components/ui/Icon";
 import { t } from "@/lib/i18n";
 import { api, type ProviderRow } from "@/lib/client/api";
 
@@ -102,58 +103,43 @@ export function ProviderCard({
   }
 
   return (
-    <div className="card p-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <span
-          className="status-led"
-          data-tone={provider.status === "connected" ? "good" : provider.status === "error" ? "warn" : "muted"}
-          aria-hidden="true"
-        />
-        <h3 className="font-medium">{provider.name}</h3>
-        <span className="chip">
-          {provider.protocol === "anthropic"
-            ? t("settings.provider.protocolAnthropic")
-            : t("settings.provider.protocolOpenai")}
-        </span>
-        {isActive ? <span className="chip chip-on">{t("settings.provider.active")}</span> : null}
-        {modelsCount ? <span className="chip">{t("settings.provider.models", { count: modelsCount })}</span> : null}
-        <div className="ml-auto flex gap-1.5">
-          <DiscoverButton provider={provider} guard={guard} notify={notify} />
-          <button
-            type="button"
-            className="btn btn-xs"
-            disabled={!modelsCount}
-            onClick={() =>
-              guard(
-                () =>
-                  api.patchSettings({
-                    activeProviderId: provider.id,
-                    activeModelId: firstModelId,
-                  }),
-                t("settings.provider.nowActive", { name: provider.name }),
-              )
-            }
-          >
-            {t("settings.provider.use")}
-          </button>
+    <div className="card provider-card min-w-0 p-5" data-active={isActive}>
+      <div className="provider-card-head">
+        <div className="min-w-0">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <span
+              className="status-led"
+              data-tone={provider.status === "connected" ? "good" : provider.status === "error" ? "warn" : "muted"}
+              aria-hidden="true"
+            />
+            <h3 className="text-base font-medium tracking-tight">{provider.name}</h3>
+            <span className="chip">
+              {provider.protocol === "anthropic"
+                ? t("settings.provider.protocolAnthropic")
+                : t("settings.provider.protocolOpenai")}
+            </span>
+            {isActive ? <span className="chip chip-on">{t("settings.provider.active")}</span> : null}
+            {modelsCount ? (
+              <span className="chip font-mono tabular-nums">{t("settings.provider.models", { count: modelsCount })}</span>
+            ) : null}
+          </div>
+          <p className="mt-1.5 max-w-prose text-sm leading-relaxed text-muted">{provider.blurb}</p>
+          {provider.statusMessage ? (
+            <p className={`mt-1 text-sm leading-relaxed ${provider.status === "error" ? "text-warn" : "text-muted"}`}>
+              {provider.statusMessage}
+            </p>
+          ) : null}
         </div>
       </div>
 
-      <p className="mt-1.5 text-xs leading-relaxed text-muted">{provider.blurb}</p>
-      {provider.statusMessage ? (
-        <p className={`mt-1 text-xs ${provider.status === "error" ? "text-warn" : "text-muted"}`}>
-          {provider.statusMessage}
-        </p>
-      ) : null}
-
       {provider.kind === "demo" ? (
-        <p className="mt-2 text-xs leading-relaxed text-muted">{t("settings.provider.demoNote")}</p>
+        <p className="mt-3 max-w-prose text-sm leading-relaxed text-muted">{t("settings.provider.demoNote")}</p>
       ) : (
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          <label className="block">
+        <div className="provider-fields mt-4">
+          <label className="block min-w-0">
             <span className="label">{t("settings.provider.baseUrl")}</span>
             <input
-              className="input mt-1 text-xs"
+              className="input mt-1"
               type="url"
               aria-invalid={errors.baseUrl ? true : undefined}
               aria-describedby={errors.baseUrl ? `baseurl-error-${provider.id}` : undefined}
@@ -166,11 +152,11 @@ export function ProviderCard({
               </span>
             ) : null}
           </label>
-          <label className="block">
+          <label className="block min-w-0">
             <span className="label">{t("settings.provider.apiKey", { detail: keyDetail() })}</span>
-            <div className="mt-1 flex gap-1.5">
+            <div className="mt-1 flex min-w-0 flex-wrap gap-1.5">
               <input
-                className="input text-xs"
+                className="input min-w-0 flex-1"
                 type="password"
                 autoComplete="off"
                 placeholder={
@@ -196,18 +182,6 @@ export function ProviderCard({
                   {t("settings.provider.keyClear")}
                 </button>
               ) : null}
-              {!provider.builtIn ? (
-                <button
-                  type="button"
-                  className="btn btn-xs"
-                  onClick={() => {
-                    if (window.confirm(t("settings.provider.removeConfirm", { name: provider.name })))
-                      void guard(() => api.deleteProvider(provider.id));
-                  }}
-                >
-                  {t("settings.provider.remove")}
-                </button>
-              ) : null}
             </div>
             {errors.apiKey ? (
               <span id={`apikey-error-${provider.id}`} className="field-error" role="alert">
@@ -217,6 +191,39 @@ export function ProviderCard({
           </label>
         </div>
       )}
+
+      <div className="provider-actions">
+        <DiscoverButton provider={provider} guard={guard} notify={notify} />
+        <button
+          type="button"
+          className="btn btn-xs"
+          disabled={!modelsCount}
+          onClick={() =>
+            guard(
+              () =>
+                api.patchSettings({
+                  activeProviderId: provider.id,
+                  activeModelId: firstModelId,
+                }),
+              t("settings.provider.nowActive", { name: provider.name }),
+            )
+          }
+        >
+          {t("settings.provider.use")}
+        </button>
+        {!provider.builtIn ? (
+          <button
+            type="button"
+            className="btn btn-xs text-warn"
+            onClick={() => {
+              if (window.confirm(t("settings.provider.removeConfirm", { name: provider.name })))
+                void guard(() => api.deleteProvider(provider.id));
+            }}
+          >
+            {t("settings.provider.remove")}
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -242,6 +249,7 @@ function DiscoverButton({ provider, guard, notify }: { provider: ProviderRow; gu
         setBusy(false);
       }}
     >
+      <Icon name="refresh" />
       {busy ? t("settings.provider.checking") : t("settings.provider.testDiscover")}
     </button>
   );

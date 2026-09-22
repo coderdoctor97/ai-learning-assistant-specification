@@ -1,6 +1,7 @@
 "use client";
 
 import { Markdown } from "@/components/Markdown";
+import { Icon } from "@/components/ui/Icon";
 import { useGhostExits } from "@/lib/motion";
 import { t, tPlural } from "@/lib/i18n";
 import type { RunState } from "@/components/studio/StageDeck";
@@ -30,17 +31,23 @@ export function QaThread({ stageId, stageIndex, stageMessages, run, busy, onCopy
     <div className="thread">
       {live.map((message, position) =>
         message.role === "user" ? (
-          <div key={message.id} className="group flex items-center justify-end gap-1.5">
-            <button
-              type="button"
-              className="btn btn-ghost btn-xs opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
-              disabled={busy}
-              onClick={() => onEditQuestion(message.content)}
-              title={t("stage.qa.editTitle")}
-            >
-              {t("stage.qa.edit")}
-            </button>
-            <div className="msg msg-user">{message.content}</div>
+          <div key={message.id} className="msg-row msg-row-user">
+            <div className="msg msg-user">
+              <div className="msg-head">{t("stage.qa.you")}</div>
+              {message.content}
+              <div className="msg-actions">
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-xs"
+                  disabled={busy}
+                  onClick={() => onEditQuestion(message.content)}
+                  title={t("stage.qa.editTitle")}
+                >
+                  <Icon name="pencil" />
+                  {t("stage.qa.edit")}
+                </button>
+              </div>
+            </div>
           </div>
         ) : (
           <div key={message.id} className="msg msg-assistant">
@@ -48,6 +55,7 @@ export function QaThread({ stageId, stageIndex, stageMessages, run, busy, onCopy
             <Markdown className="prose-compact">{message.content}</Markdown>
             <div className="msg-actions">
               <button type="button" className="btn btn-ghost btn-xs" onClick={() => onCopy(message.content)}>
+                <Icon name="copy" />
                 {t("stage.copy")}
               </button>
               {(() => {
@@ -61,6 +69,7 @@ export function QaThread({ stageId, stageIndex, stageMessages, run, busy, onCopy
                     onClick={() => onAsk(stageId, asked.content)}
                     title={t("stage.qa.regenerateTitle")}
                   >
+                    <Icon name="refresh" />
                     {t("stage.regenerate")}
                   </button>
                 );
@@ -88,7 +97,7 @@ export function QaThread({ stageId, stageIndex, stageMessages, run, busy, onCopy
       ))}
 
       {qaStreaming && run ? (
-        <div className="msg msg-assistant">
+        <div className="msg msg-assistant msg-status">
           {run.text ? (
             <>
               <div className="msg-head">{t("app.brandSecond")}</div>

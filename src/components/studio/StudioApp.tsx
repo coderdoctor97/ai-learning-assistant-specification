@@ -9,6 +9,7 @@ import {
   type ResourceRef,
   type SessionDetail,
 } from "@/lib/client/api";
+import { Icon } from "@/components/ui/Icon";
 import { t } from "@/lib/i18n";
 import { applyTheme } from "@/lib/theme";
 import { useMediaQuery } from "@/lib/useMediaQuery";
@@ -32,13 +33,13 @@ const NO_CAPS: Capabilities = {
 /* Initial-load skeleton mirroring the studio shell geometry. */
 function StudioSkeleton() {
   return (
-    <div className="studio-shell flex h-screen overflow-hidden" aria-busy="true">
+    <div className="studio-shell flex min-h-dvh overflow-hidden" aria-busy="true">
       <div className="w-14 shrink-0 border-r border-line bg-surface px-2 py-4" aria-hidden="true">
         <div className="skeleton mx-auto h-8 w-8" />
         <div className="skeleton mx-auto mt-3 h-8 w-8" />
       </div>
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex items-center gap-2 border-b border-line bg-surface px-4 py-2.5" aria-hidden="true">
+        <div className="studio-header studio-topbar" aria-hidden="true">
           <div className="skeleton h-8 w-40" />
           <div className="skeleton h-8 w-56" />
           <div className="skeleton ml-auto h-8 w-24" />
@@ -388,10 +389,7 @@ export function StudioApp() {
   if (loading || !state) {
     if (!loading && loadError) {
       return (
-        <main id="main-content" className="flex h-screen items-center justify-center px-6" tabIndex={-1}>
-          <a href="#main-content" className="skip-link">
-            {t("app.skipToContent")}
-          </a>
+        <main id="main-content" className="flex min-h-dvh items-center justify-center px-6" tabIndex={-1}>
           <div className="card card-warn w-full max-w-md p-6 text-center">
             <div className="text-warn mb-2 text-lg">{t("studio.error.title")}</div>
             <p className="mb-4 text-sm leading-relaxed text-muted">{loadError}</p>
@@ -415,11 +413,7 @@ export function StudioApp() {
   }
 
   return (
-    <main id="main-content" className="studio-shell flex h-screen overflow-hidden" tabIndex={-1}>
-      <a href="#main-content" className="skip-link">
-        {t("app.skipToContent")}
-      </a>
-
+    <main id="main-content" className="studio-shell flex min-h-dvh overflow-hidden" tabIndex={-1}>
       <Sidebar
         state={state}
         activeId={detail?.session.id ?? null}
@@ -451,7 +445,7 @@ export function StudioApp() {
         onMobileOpen={() => setMobileNavOpen(true)}
       />
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="studio-chrome flex min-w-0 flex-1 flex-col">
         <TopBar
           state={state}
           activeModel={activeModel}
@@ -490,7 +484,7 @@ export function StudioApp() {
           <div className="toast card animate-rise pointer-events-auto w-full max-w-lg px-4 py-3 text-sm" data-tone={toast.kind}>
             <div className="flex items-start gap-3">
               <span className="toast-icon" aria-hidden="true">
-                {toast.kind === "error" ? "⚠" : "✓"}
+                {toast.kind === "error" ? <Icon name="warn" /> : <Icon name="check" />}
               </span>
               <span className="leading-relaxed">{toast.message}</span>
               <button
@@ -499,7 +493,7 @@ export function StudioApp() {
                 onClick={() => setToast(null)}
                 aria-label={t("studio.toast.dismiss")}
               >
-                <span aria-hidden="true">×</span>
+                <Icon name="close" />
               </button>
             </div>
           </div>

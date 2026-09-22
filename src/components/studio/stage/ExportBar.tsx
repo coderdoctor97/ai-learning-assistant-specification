@@ -1,6 +1,7 @@
 "use client";
 
 import { t } from "@/lib/i18n";
+import { Icon } from "@/components/ui/Icon";
 
 const FORMATS: [string, "stage.export.formatMd" | "stage.export.formatZip" | "stage.export.formatDocx" | "stage.export.formatPdf" | "stage.export.formatHtml" | "stage.export.formatTxt"][] = [
   ["md", "stage.export.formatMd"],
@@ -15,12 +16,12 @@ const FORMATS: [string, "stage.export.formatMd" | "stage.export.formatZip" | "st
 export function ExportBar({ sessionId }: { sessionId: string }) {
   return (
     <div className="export-bar card animate-rise mt-6 p-5">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
         <span className="chip chip-on">{t("stage.export.complete")}</span>
-        <h3 className="font-serif text-base">{t("stage.export.title")}</h3>
+        <h3 className="text-lg font-medium tracking-tight sm:text-xl">{t("stage.export.title")}</h3>
       </div>
-      <p className="mt-1.5 text-xs leading-relaxed text-muted">{t("stage.export.body")}</p>
-      <div className="mt-3 flex flex-wrap gap-2">
+      <p className="mt-1.5 max-w-prose text-sm leading-relaxed text-muted">{t("stage.export.body")}</p>
+      <div className="export-actions mt-3">
         {FORMATS.map(([format, labelKey]) => (
           <a
             key={format}
@@ -29,6 +30,7 @@ export function ExportBar({ sessionId }: { sessionId: string }) {
             target={format === "pdf" ? "_blank" : undefined}
             rel="noreferrer"
           >
+            <Icon name="download" />
             {t(labelKey)}
           </a>
         ))}

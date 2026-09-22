@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
+import { t } from "@/lib/i18n";
 import "./globals.css";
 
 /*
@@ -58,7 +59,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeBootstrap }} />
       </head>
-      <body className="min-h-screen bg-bg text-ink antialiased">{children}</body>
+      <body className="min-h-dvh bg-bg text-ink antialiased">
+        <a href="#main-content" className="skip-link">
+          {t("app.skipToContent")}
+        </a>
+        {children}
+      </body>
     </html>
   );
 }
