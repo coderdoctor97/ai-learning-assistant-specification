@@ -747,6 +747,22 @@ body {
     opacity: var(--disabled-opacity);
   }
 
+  /* Sidebar collapse/expand: one step larger than the base icon target so
+     it reads as the panel's own control, and nudged to the content edge. */
+  .sidebar-collapse-btn {
+    min-width: 1.75rem;
+    min-height: 1.75rem;
+  }
+
+  .sidebar-collapse-btn svg {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+
+  .sidebar-panel .sidebar-collapse-btn {
+    margin-right: -0.25rem;
+  }
+
   /* ---- Theme switcher (segmented control) -------------------------- */
   .theme-switch {
     display: flex;

@@ -64,7 +64,7 @@ test("full studio flow", async ({ page }) => {
   await expect(sourcesFold).toHaveAttribute("aria-expanded", "false");
 
   // -- Regeneration with modifier buttons ----------------------------------
-  const regenerate = page.getByRole("button", { name: "↻ Regenerate" }).first();
+  const regenerate = page.getByRole("button", { name: "Regenerate", exact: true }).first();
   await regenerate.click();
   await expect(page.locator(".stage-card")).toHaveAttribute("aria-busy", "true", { timeout: 30_000 });
   await expect(page.locator(".stage-card")).not.toHaveAttribute("aria-busy", "true", { timeout: 180_000 });

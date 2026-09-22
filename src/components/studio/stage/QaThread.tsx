@@ -79,15 +79,15 @@ export function QaThread({ stageId, stageIndex, stageMessages, run, busy, onCopy
             <div className="msg-head">{t("app.brandSecond")}</div>
             <Markdown className="prose-compact">{message.content}</Markdown>
             <div className="msg-actions flex items-center gap-2">
-              {/* [A11y & SVG Enhancement] Assistant answer copy button with 2s checkmark state */}
+              {/* [A11y & SVG Enhancement] Assistant answer copy: icon-only with 2s checkmark state */}
               <Tooltip content={copiedId === message.id ? "Copied!" : "Copy answer to clipboard"} side="top">
                 <button
                   type="button"
-                  className="btn btn-ghost btn-xs inline-flex items-center gap-1.5"
+                  className="btn btn-ghost btn-xs inline-flex items-center"
                   onClick={() => handleCopyMessage(message.id, message.content)}
+                  aria-label={copiedId === message.id ? "Copied" : t("stage.copy")}
                 >
                   <Icon name={copiedId === message.id ? "check" : "copy"} className={cn("shrink-0", copiedId === message.id && "text-emerald-500")} />
-                  {copiedId === message.id ? "Copied" : t("stage.copy")}
                 </button>
               </Tooltip>
 
@@ -95,16 +95,16 @@ export function QaThread({ stageId, stageIndex, stageMessages, run, busy, onCopy
                 const asked = [...live.slice(0, position)].reverse().find((entry) => entry.role === "user");
                 if (!asked) return null;
                 return (
-                  /* [A11y & SVG Enhancement] Regenerate answer button with rotateCw icon and tooltip */
+                  /* [A11y & SVG Enhancement] Regenerate answer: icon-only with rotateCw icon and tooltip */
                   <Tooltip content="Re-send question to generate a new answer" side="top">
                     <button
                       type="button"
-                      className="btn btn-ghost btn-xs inline-flex items-center gap-1.5"
+                      className="btn btn-ghost btn-xs inline-flex items-center"
                       disabled={busy}
                       onClick={() => onAsk(stageId, asked.content)}
+                      aria-label={t("stage.regenerate")}
                     >
                       <Icon name="rotateCw" className={cn("shrink-0", busy && "animate-spin")} />
-                      {t("stage.regenerate")}
                     </button>
                   </Tooltip>
                 );

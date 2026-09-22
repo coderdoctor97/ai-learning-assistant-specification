@@ -141,7 +141,7 @@ function SessionMenu({
         <Popover.Trigger
           className="icon-btn row-action absolute right-1 top-1 z-20"
           hasPopup="menu"
-          aria-label={t("sidebar.session.actions")}
+          ariaLabel={t("sidebar.session.actions")}
           onClick={(event) => event.stopPropagation()}
         >
           <Icon name="moreHorizontal" />
@@ -285,7 +285,7 @@ export function Sidebar({
         <Tooltip content="Expand sidebar (⌘B)" side="right">
           <button
             type="button"
-            className="icon-btn"
+            className="icon-btn sidebar-collapse-btn"
             onClick={isMobile ? () => onMobileOpen?.() : onToggleCollapse}
             aria-label={t("sidebar.expand")}
             aria-expanded={isMobile ? true : !collapsed}
@@ -337,7 +337,7 @@ export function Sidebar({
           <Tooltip content="Collapse sidebar (⌘B)" side="left">
             <button
               type="button"
-              className="icon-btn ml-auto"
+              className="icon-btn sidebar-collapse-btn ml-auto"
               onClick={isMobile ? onMobileClose : onToggleCollapse}
               aria-label={t("sidebar.collapse")}
             >

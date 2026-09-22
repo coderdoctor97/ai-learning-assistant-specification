@@ -138,11 +138,11 @@ export function Tooltip({
           role="tooltip"
           id={tooltipId}
           className={cn(
-            "pointer-events-none absolute z-50 whitespace-nowrap rounded bg-surface2 px-2 py-1 font-sans text-micro font-medium text-ink shadow-md transition-opacity duration-150 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
-            side === "top" && "-top-8 left-1/2 -translate-x-1/2",
-            side === "bottom" && "-bottom-8 left-1/2 -translate-x-1/2",
-            side === "left" && "right-full top-1/2 -translate-y-1/2 mr-2",
-            side === "right" && "left-full top-1/2 -translate-y-1/2 ml-2",
+            "pointer-events-none absolute z-50 whitespace-nowrap rounded bg-surface2 px-2 py-0.5 font-sans text-nano font-medium leading-snug text-ink shadow-md transition-opacity duration-150 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
+            side === "top" && "-top-6 left-1/2 -translate-x-1/2",
+            side === "bottom" && "-bottom-6 left-1/2 -translate-x-1/2",
+            side === "left" && "right-full top-1/2 -translate-y-1/2 mr-1.5",
+            side === "right" && "left-full top-1/2 -translate-y-1/2 ml-1.5",
             className,
           )}
         >
@@ -184,7 +184,7 @@ export function Tooltip({
                     : "translate(0, -50%)",
               }}
               className={cn(
-                "pointer-events-none z-50 max-w-xs rounded-md bg-surface2 px-2.5 py-1 text-micro font-medium leading-tight text-ink shadow-md border border-line animate-rise select-none",
+                "pointer-events-none z-50 max-w-56 rounded bg-surface2 px-2 py-0.5 text-nano font-medium leading-snug text-ink shadow-md border border-line animate-rise select-none",
                 className,
               )}
             >

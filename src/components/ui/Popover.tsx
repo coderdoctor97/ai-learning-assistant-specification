@@ -135,6 +135,7 @@ export function PopoverTrigger({
   disabled,
   title,
   hasPopup,
+  ariaLabel,
   onClick,
   onKeyDown,
   onContextMenu,
@@ -144,6 +145,8 @@ export function PopoverTrigger({
   disabled?: boolean;
   title?: string;
   hasPopup?: "menu" | "listbox" | "dialog" | "true";
+  /** Accessible name — required when the trigger is icon-only. */
+  ariaLabel?: string;
   /** Runs before the built-in toggle (e.g. stopPropagation in rows). */
   onClick?: React.MouseEventHandler<HTMLButtonElement>;
   onKeyDown?: React.KeyboardEventHandler<HTMLButtonElement>;
@@ -158,6 +161,7 @@ export function PopoverTrigger({
       className={className}
       disabled={disabled}
       title={title}
+      aria-label={ariaLabel}
       aria-haspopup={hasPopup}
       aria-expanded={open}
       aria-controls={open ? contentId : undefined}

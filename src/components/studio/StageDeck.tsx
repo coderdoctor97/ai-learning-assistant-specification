@@ -171,48 +171,53 @@ export function StageDeck({
               </div>
 
               {stage && !streamingHere ? (
-                /* [A11y & SVG Enhancement] Stage card footer actions with SVG icons, copy state, spin animation and tooltips */
+                /* [A11y & SVG Enhancement] Stage card footer: one icon per
+                   action, no visible labels — the tooltip names the action. */
                 <div className="stage-footer flex flex-wrap gap-1.5">
                   <Tooltip content={copied ? "Copied!" : "Copy stage content as formatted Markdown"} side="top">
-                    <button type="button" className="btn btn-xs inline-flex items-center gap-1.5" onClick={() => copy(stage.content)}>
+                    <button
+                      type="button"
+                      className="btn btn-xs inline-flex items-center"
+                      onClick={() => copy(stage.content)}
+                      aria-label={copied ? "Copied" : t("stage.copy")}
+                    >
                       <Icon name={copied ? "check" : "copy"} className={cn("shrink-0", copied && "text-emerald-500")} />
-                      {copied ? "Copied" : t("stage.copy")}
                     </button>
                   </Tooltip>
 
                   <Tooltip content="Re-generate response for this stage using active model" side="top">
                     <button
                       type="button"
-                      className="btn btn-xs inline-flex items-center gap-1.5"
+                      className="btn btn-xs inline-flex items-center"
                       disabled={busy}
                       onClick={() => onGenerate(stageIndex, "none")}
+                      aria-label={t("stage.regenerate")}
                     >
                       <Icon name="rotateCw" className={cn("shrink-0", busy && "animate-spin")} />
-                      {t("stage.regenerate")}
                     </button>
                   </Tooltip>
 
                   <Tooltip content="Longer: Expand detail and provide worked examples" side="top">
                     <button
                       type="button"
-                      className="btn btn-xs inline-flex items-center gap-1.5"
+                      className="btn btn-xs inline-flex items-center"
                       disabled={busy}
                       onClick={() => onGenerate(stageIndex, "longer")}
+                      aria-label={t("stage.longer")}
                     >
                       <Icon name="maximize2" className="shrink-0" />
-                      {t("stage.longer")}
                     </button>
                   </Tooltip>
 
                   <Tooltip content="Shorter: Summarize key points concisely" side="top">
                     <button
                       type="button"
-                      className="btn btn-xs inline-flex items-center gap-1.5"
+                      className="btn btn-xs inline-flex items-center"
                       disabled={busy}
                       onClick={() => onGenerate(stageIndex, "shorter")}
+                      aria-label={t("stage.shorter")}
                     >
                       <Icon name="minimize2" className="shrink-0" />
-                      {t("stage.shorter")}
                     </button>
                   </Tooltip>
 
@@ -226,12 +231,12 @@ export function StageDeck({
                   >
                     <button
                       type="button"
-                      className="btn btn-xs inline-flex items-center gap-1.5"
+                      className="btn btn-xs inline-flex items-center"
                       disabled={busy || !deeperAvailable}
                       onClick={() => onGenerate(stageIndex, "deeper")}
+                      aria-label={t("stage.deeper")}
                     >
                       <Icon name="sparkles" className="shrink-0" />
-                      {t("stage.deeper")}
                     </button>
                   </Tooltip>
                 </div>

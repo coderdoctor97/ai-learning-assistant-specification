@@ -68,7 +68,7 @@ function CapabilitySummary({ capabilities }: { capabilities: Capabilities }) {
         className="btn btn-xs lg:hidden"
         hasPopup="dialog"
         title={t("topbar.capability.groupLabel")}
-        aria-label={t("topbar.capability.summary", { on: supportedCount, total: CAPABILITY_KEYS.length })}
+        ariaLabel={t("topbar.capability.summary", { on: supportedCount, total: CAPABILITY_KEYS.length })}
       >
         <span className="font-mono tabular-nums">
           {t("topbar.capability.summary", { on: supportedCount, total: CAPABILITY_KEYS.length })}
@@ -238,24 +238,22 @@ export function TopBar({
   return (
     <header className="studio-header studio-topbar z-20" aria-label="Studio controls">
       <div className="studio-topbar-primary">
-        {/* [A11y & SVG Enhancement] Provider status chip with semantic SVG icon and tooltip */}
-        <Tooltip content={`Provider status: ${activeProvider?.name ?? "None"} (${activeProvider?.status ?? "not set"})`} side="bottom">
-          <Link
-            href="/settings"
-            className="provider-chip inline-flex items-center gap-1.5"
-            title={activeProvider?.statusMessage ?? t("topbar.provider.statusTitle")}
-          >
-            <Icon name={statusIcon} className={cn("w-3.5 h-3.5 shrink-0", statusToneClass)} />
-            <span className="truncate font-medium">{activeProvider?.name ?? t("topbar.provider.none")}</span>
-            <span className="hidden text-micro text-muted sm:inline">
-              {activeProvider
-                ? activeProvider.status === "connected"
-                  ? t("topbar.provider.connected")
-                  : activeProvider.status
-                : t("topbar.provider.notSet")}
-            </span>
-          </Link>
-        </Tooltip>
+        {/* [A11y & SVG Enhancement] Provider status chip with semantic SVG icon */}
+        <Link
+          href="/settings"
+          className="provider-chip inline-flex items-center gap-1.5"
+          title={activeProvider?.statusMessage ?? t("topbar.provider.statusTitle")}
+        >
+          <Icon name={statusIcon} className={cn("w-3.5 h-3.5 shrink-0", statusToneClass)} />
+          <span className="truncate font-medium">{activeProvider?.name ?? t("topbar.provider.none")}</span>
+          <span className="hidden text-micro text-muted sm:inline">
+            {activeProvider
+              ? activeProvider.status === "connected"
+                ? t("topbar.provider.connected")
+                : activeProvider.status
+              : t("topbar.provider.notSet")}
+          </span>
+        </Link>
 
         {/* Model picker — listbox popover ---------------------------------- */}
         <div className="relative min-w-0">
@@ -389,20 +387,19 @@ export function TopBar({
         </div>
         <div className="theme-switch" role="radiogroup" aria-label={t("topbar.theme.groupLabel")}>
           {THEMES.map((theme) => (
-            /* [A11y & SVG Enhancement] Theme switcher radios with tooltips */
-            <Tooltip key={theme.key} content={`Switch theme: ${t(theme.labelKey)}`} side="bottom">
-              <button
-                type="button"
-                role="radio"
-                aria-checked={state.settings.theme === theme.key}
-                className="theme-option"
-                data-active={state.settings.theme === theme.key}
-                onClick={() => onPatchSettings({ theme: theme.key })}
-                aria-label={t("topbar.theme.title", { name: t(theme.labelKey) })}
-              >
-                <Icon name={theme.icon} />
-              </button>
-            </Tooltip>
+            /* Mode switch: labeled radios, no tooltip by design. */
+            <button
+              key={theme.key}
+              type="button"
+              role="radio"
+              aria-checked={state.settings.theme === theme.key}
+              className="theme-option"
+              data-active={state.settings.theme === theme.key}
+              onClick={() => onPatchSettings({ theme: theme.key })}
+              aria-label={t("topbar.theme.title", { name: t(theme.labelKey) })}
+            >
+              <Icon name={theme.icon} />
+            </button>
           ))}
         </div>
       </div>

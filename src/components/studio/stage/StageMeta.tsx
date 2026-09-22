@@ -16,7 +16,7 @@ type Props = {
 };
 
 /*
- * Stage-card toolbar (metadata + ✎ Edit prompt) and the inline prompt
+ * Stage-card toolbar (metadata + pencil Edit prompt trigger) and the inline prompt
  * editor. The parent keys this component on
  * `${stageIndex}:${title}:${instructions}`, so a stage or step change
  * remounts with fresh draft state and a closed editor — the exact reset
@@ -35,17 +35,18 @@ export function StageMeta({ step, stageIndex, stepsTotal, busy, onEditStep, onGe
           {step?.title}
         </h2>
         <div className="ml-auto flex items-center gap-1">
-          {/* [A11y & SVG Enhancement] Edit stage prompt trigger with tooltip */}
-          <Tooltip content="Customize instructions and title for this stage" side="top">
+          {/* [A11y & SVG Enhancement] Edit stage prompt: icon-only trigger,
+              named by its tooltip and aria-label. */}
+          <Tooltip content={t("stage.editPrompt")} side="top">
             <button
               type="button"
-              className="btn btn-ghost btn-xs inline-flex items-center gap-1.5"
+              className="btn btn-ghost btn-xs inline-flex items-center"
               aria-expanded={editing}
+              aria-label={t("stage.editPrompt")}
               onClick={() => setEditing((value) => !value)}
               disabled={busy}
             >
               <Icon name="pencil" className="shrink-0" />
-              {t("stage.editPrompt")}
             </button>
           </Tooltip>
         </div>
