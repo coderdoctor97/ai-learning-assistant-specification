@@ -28,6 +28,13 @@ jobs:
           NEXT_TELEMETRY_DISABLED: "1"
       - name: Check UTF-8 charset declaration (source templates + prerendered HTML)
         run: node scripts/check-charset.mjs .
+      - name: Install Chromium for viewport checks
+        run: npx playwright install --with-deps chromium
+      - name: Check responsive viewport (served HTML, exports, mobile layout)
+        env:
+          PW_USE_BUNDLED_CHROMIUM: "0"
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm run test:viewport -- --workers=2
       - name: Check UTF-8 charset declaration (served responses + Content-Type)
         env:
           NEXT_TELEMETRY_DISABLED: "1"

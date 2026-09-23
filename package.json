@@ -10,7 +10,8 @@
     "db:push": "drizzle-kit push",
     "lint:css": "stylelint \"src/**/*.css\"",
     "test:e2e": "playwright test",
-    "test:charset": "node --test scripts/check-charset.test.mjs && node scripts/check-charset.mjs ."
+    "test:charset": "node --test scripts/check-charset.test.mjs && node scripts/check-charset.mjs .",
+    "test:viewport": "playwright test tests/html/viewport.spec.ts tests/responsive/viewport.spec.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
@@ -43,6 +44,7 @@
     "drizzle-kit": "0.31.10",
     "eslint": "9.39.4",
     "eslint-config-next": "16.2.6",
+    "parse5": "^7.3.0",
     "postcss": "8.5.8",
     "stylelint": "^17.15.0",
     "stylelint-config-recess-order": "^7.8.0",

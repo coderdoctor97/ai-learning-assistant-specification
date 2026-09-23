@@ -368,7 +368,7 @@ export function SettingsApp() {
           {t("settings.back")}
         </Link>
         <h1 className="title-page">{t("settings.title")}</h1>
-        <span className="chip">{t("settings.tagline")}</span>
+        <span className="chip max-w-full whitespace-normal">{t("settings.tagline")}</span>
       </div>
 
       <nav
