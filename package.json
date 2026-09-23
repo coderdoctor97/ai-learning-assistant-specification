@@ -11,6 +11,8 @@
     "lint:css": "stylelint \"src/**/*.css\"",
     "test:e2e": "playwright test",
     "test:charset": "node --test scripts/check-charset.test.mjs && node scripts/check-charset.mjs .",
+    "lint:doctype": "node scripts/check-doctype.mjs",
+    "test:doctype": "node --test scripts/check-doctype.test.mjs && npm run lint:doctype",
     "test:viewport": "playwright test tests/html/viewport.spec.ts tests/responsive/viewport.spec.ts"
   },
   "dependencies": {

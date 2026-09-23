@@ -1,0 +1,36 @@
+# Pending activation: copy to .github/workflows/doctype.yml when the GitHub App has workflows permission.
+name: HTML5 doctype
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  doctype:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install existing dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Unit-test the doctype checker (includes seeded negative tests)
+        run: node --test scripts/check-doctype.test.mjs
+      # Next.js App Router creates HTML only at build/serve time; linting
+      # source templates alone cannot prove its generated pages comply.
+      - name: Build Next.js to generate prerendered HTML
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+      - name: Check templates and prerendered HTML
+        run: npm run lint:doctype
+      - name: Check raw served HTML and browser standards mode
+        run: npx playwright test tests/html/doctype.spec.ts --workers=1
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
