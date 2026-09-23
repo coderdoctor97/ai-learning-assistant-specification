@@ -1,0 +1,41 @@
+# Copy to .github/workflows/frontend-checklist.yml to enable (the automation token that
+# authored this change lacks the GitHub `workflows` permission, so it could not add it there).
+name: frontend-checklist
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  charset:
+    name: html/charset (UTF-8 declared first in <head>)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Unit-test the charset checker
+        run: node --test scripts/check-charset.test.mjs
+      # App Router renders <head> from JSX, so the real documents only exist
+      # after a build (.next/server/app/*.html); the checker scans them.
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+      - name: Check UTF-8 charset declaration (source templates + prerendered HTML)
+        run: node scripts/check-charset.mjs .
+      - name: Check UTF-8 charset declaration (served responses + Content-Type)
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: |
+          npx next start -p 4173 -H 127.0.0.1 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:4173/api/health >/dev/null && break; sleep 1; done
+          node scripts/check-charset.mjs \
+            http://127.0.0.1:4173/ \
+            http://127.0.0.1:4173/studio \
+            http://127.0.0.1:4173/settings \
+            http://127.0.0.1:4173/__charset-404-probe__
